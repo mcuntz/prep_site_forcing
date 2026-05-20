@@ -29,16 +29,18 @@ __all__ = ['prepSiteForcing']
 use_musica_qair = False  # Use MuSICA code for qair/rhair/eair conversions
 reproduce_old = False    # reproduce old version of prep_site_forcing
 
-
+#
 # Constants
+#
 
 # Molar mass of water (:math:`kg mol^{-1}`)
 molmass_h2o = 18.01528e-3
 # Molar mass of dry air of standard atmosphere (:math:`kg mol^{-1}`)
 molmass_air = 28.9644e-3
 
-
+#
 # Functions
+#
 
 def str2bool(istr, default):
     """
@@ -129,8 +131,9 @@ def cost_line(p, x, y):
     """
     return np.sum(np.abs(y - line_p(x, p)))
 
-
+#
 # Class
+#
 
 class prepSiteForcing(object):
     """
@@ -294,10 +297,22 @@ class prepSiteForcing(object):
         cfg = configparser.ConfigParser(interpolation=None)
         cfg.optionxform = str  # preserve case of keys
         cfg.read(configfile)
-        
+
+        # Check mandatory sections and options
+        sect = ['Model', 'Site', 'VarNames']
+        for ss in sect:
+            if not cfg.has_section(ss):
+                raise ValueError(f'Mandatory section "{ss}" missing in config file')
+        odict = {'Options': 'input'}
+        for ss in odict:
+            if not cfg.has_option(ss, odict[ss]):
+                raise ValueError(f'Mandatory option "{odict[ss]}" in section'
+                                 f' "{ss}" missing in config file')
+
         # Model
-        if not cfg.has_section('Model'):
-            raise ValueError('Mandatory section "Model" missing in config file')
+        ss = 'Model'
+        if not cfg.has_section(ss):
+            raise ValueError(f'Mandatory section "{ss}" missing in config file')
         self.ecomodel = cfg['Model'].get('model', '')
 
         # Options
@@ -311,8 +326,9 @@ class prepSiteForcing(object):
             self.keep_csv = str2bool(cfg['Options'].get('keep_csv', ''), False)
 
         # Site
-        if not cfg.has_section('Site'):
-            raise ValueError('Mandatory section "Site" missing in config file')
+        ss = 'Site'
+        if not cfg.has_section(ss):
+            raise ValueError(f'Mandatory section "{ss}" missing in config file')
         self.site_name = cfg['Site'].get('name', '')
         self.latitude = str2float(cfg['Site'].get('latitude', ''), -9999.)
         self.longitude = str2float(cfg['Site'].get('longitude', ''), -9999.)
@@ -393,8 +409,9 @@ class prepSiteForcing(object):
             self.co2co2_column = str2int(cfg['CO2'].get('co2co2_column', ''), 1)
 
         # VarNames
-        if not cfg.has_section('VarNames'):
-            raise ValueError('Mandatory section "VarNames" missing in config file')
+        ss = 'VarNames'
+        if not cfg.has_section(ss):
+            raise ValueError(f'Mandatory section "{ss}" missing in config file')
         # add appropriate precip name
         for iv, vv in enumerate(self.pnames):
             vname = cfg['VarNames'].get(f'name_{vv}', '')

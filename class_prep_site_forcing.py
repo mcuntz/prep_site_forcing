@@ -16,7 +16,6 @@ import tempfile
 import warnings
 import numpy as np
 import pandas as pd
-import scipy.optimize as opt
 import xarray as xr
 import pyjams as pj  # for mad and all functions about air humidity
 from musica_qair import q_air_eair, e_air_sat
@@ -1668,6 +1667,8 @@ class prepSiteForcing(object):
             dfvar but with fitted values
 
         """
+        import scipy.optimize as opt
+
         pdict = {'linear_params': None,
                  'fit_era': None, 'fit_obs': None,
                  'fitted_era': None, 'fitted_obs': None,

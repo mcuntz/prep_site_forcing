@@ -183,8 +183,6 @@ class prepSiteForcing(object):
         self.aspect = 0.
         # MuSICA
         self.time2gmt = 0.
-        self.variablefile = ''
-        self.namelist = ''
         self.rsl_yoyo = False
         # Input
         self.infile = ''
@@ -194,6 +192,7 @@ class prepSiteForcing(object):
         self.date_format = 'ISO8601'
         self.ftimestep = 1.0
         self.undef = np.nan
+        # pandas.read_csv(filepath_or_buffer, *, sep=<no_default>, delimiter=None, header='infer', names=<no_default>, index_col=None, usecols=None, dtype=None, engine=None, converters=None, true_values=None, false_values=None, skipinitialspace=False, skiprows=None, skipfooter=0, nrows=None, na_values=None, keep_default_na=True, na_filter=True, skip_blank_lines=True, parse_dates=None, date_format=None, dayfirst=False, cache_dates=True, iterator=False, chunksize=None, compression='infer', thousands=None, decimal='.', lineterminator=None, quotechar='"', quoting=0, doublequote=True, escapechar=None, comment=None, encoding=None, encoding_errors='strict', dialect=None, on_bad_lines='error', low_memory=True, memory_map=False, float_precision=None, storage_options=None, dtype_backend=<no_default>)[source]
         # Output
         self.outputfile = ''
         self.fill_value = ''
@@ -278,7 +277,7 @@ class prepSiteForcing(object):
             infile, delimiter, skiprows,
             date_columns, date_format,
             outputfile,
-            erapath, variablefile, namelist
+            erapath
             startdate, enddate, timestep,
             ftimestep,
             imputation_method, keep_csv, rsl_yoyo
@@ -345,8 +344,6 @@ class prepSiteForcing(object):
         # MuSICA
         if cfg.has_section('MuSICA'):
             self.time2gmt = str2float(cfg['MuSICA'].get('time2gmt', ''), 0.)
-            self.variablefile = cfg['MuSICA'].get('variables', '')
-            self.namelist = cfg['MuSICA'].get('namelist', '')
             self.rsl_yoyo = str2bool(cfg['MuSICA'].get('rsl_yoyo', ''), False)
         if self.rsl_yoyo:
             self.varnames.append('h_sbl')
@@ -749,7 +746,8 @@ class prepSiteForcing(object):
             navalues.append(self.undef)
         rcargs = {'sep': self.delimiter,
                   'header': 0,
-                  'skiprows': [1,] if self.skiprows > 1 else None,
+                  'skiprows': (list(range(1,self.skiprows))
+                               if self.skiprows > 1 else None),
                   # 'parse_dates': {'prep_datetime': self.date_columns},
                   'parse_dates': self.date_columns,
                   'date_format': self.date_format,
@@ -2263,15 +2261,12 @@ class prepSiteForcing(object):
                 'site_longitude': self.longitude,
                 'altitude': self.altitude,
                 'time2gmt': self.time2gmt,
-                'forcing_height': self.reference_height,
-                'namelist': self.namelist})
+                'forcing_height': self.reference_height})
             aopt += (f' --site_latitude {self.latitude}'
                      f' --site_longitude {self.longitude}'
                      f' --site_altitude {self.altitude}'
                      f' --time2gmt {self.time2gmt}'
                      f' --forcing_height {self.reference_height}')
-            if self.namelist:
-                aopt += f' -n {self.namelist}'
             print(f'Calling python ascii2{leco}.py {aopt} {csvfile}')
         elif leco == 'isba':
             kwargs.update({

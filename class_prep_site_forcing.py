@@ -10,15 +10,17 @@ History
    * Allow no input file to get all ERA5 forcing, Matthias Cuntz, Apr 2026
 
 '''
+from collections.abc import Iterable
 import configparser
+from math import isfinite
 import os
 import tempfile
 import warnings
 import numpy as np
 import pandas as pd
-import xarray as xr
 import pyjams as pj  # for mad and all functions about air humidity
-from musica_qair import q_air_eair, e_air_sat
+import xarray as xr
+from musica_qair import q_air_eair, e_air_sat #
 
 
 __all__ = ['prepSiteForcing']
@@ -75,6 +77,90 @@ def str2int(istr, default):
         return int(istr)
     else:
         return default
+
+def parse_entry(text):
+    """
+    Convert text string to correct data type
+
+    Parse an entry field to None, bool, int, float, datetime, list, dict
+
+    Parameters
+    ----------
+    text : str
+        String from entry field
+
+    Returns
+    -------
+    None, bool, int, float, datetime, list, dict
+
+    Examples
+    --------
+    >>> parse_entry('7')
+    7
+    >>> parse_entry('7,3')
+    [7, 3]
+
+    """
+    if text is None:
+        tt = None
+    elif ',' in text:
+        # # list or str
+        # try:
+        #     tt = eval(f'[{text}]')
+        # except SyntaxError:
+        #     tt = text
+        # parse each element
+        stext = text.split(',')
+        tt = [ parse_entry(ss) for ss in stext ]
+    elif text == 'None':
+        # None
+        tt = None
+    elif text == 'True':
+        # bool True
+        tt = True
+    elif text == 'False':
+        # bool False
+        tt = False
+    elif ':' in text:
+        # dict, datetime, or str
+        try:
+            tt = eval(f'{{{text}}}')
+        except SyntaxError:
+            try:
+                tt = np.datetime64(text)
+            except ValueError:
+                tt = text
+    elif text.count('-') == 2:
+        # datetime or str
+        try:
+            tt = np.datetime64(text)
+        except ValueError:
+            tt = text
+    else:
+        tt = text
+
+    # if above gave str, check for scalars
+    if tt == text:
+        try:
+            # int
+            tt = int(text)
+        except ValueError:
+            try:
+                # float
+                tt = float(text)
+            except ValueError:
+                # str
+                tt = text
+            try:
+                if not isfinite(tt):
+                    # keep NaN and Inf string
+                    tt = text
+            except TypeError:
+                pass
+        except TypeError:
+            # e.g. None
+            pass
+    return tt
 
 # Line for curve_fit
 def flin(x, a, b):
@@ -186,13 +272,15 @@ class prepSiteForcing(object):
         self.rsl_yoyo = False
         # Input
         self.infile = ''
-        self.delimiter = None
-        self.skiprows = 1
-        self.date_columns = None
+        self.sep = None
+        self.header = 'infer'
+        self.index_col = None
+        self.usecols = None
+        self.skiprows = None
+        self.na_values = None
+        self.parse_dates = None
         self.date_format = 'ISO8601'
         self.ftimestep = 1.0
-        self.undef = np.nan
-        # pandas.read_csv(filepath_or_buffer, *, sep=<no_default>, delimiter=None, header='infer', names=<no_default>, index_col=None, usecols=None, dtype=None, engine=None, converters=None, true_values=None, false_values=None, skipinitialspace=False, skiprows=None, skipfooter=0, nrows=None, na_values=None, keep_default_na=True, na_filter=True, skip_blank_lines=True, parse_dates=None, date_format=None, dayfirst=False, cache_dates=True, iterator=False, chunksize=None, compression='infer', thousands=None, decimal='.', lineterminator=None, quotechar='"', quoting=0, doublequote=True, escapechar=None, comment=None, encoding=None, encoding_errors='strict', dialect=None, on_bad_lines='error', low_memory=True, memory_map=False, float_precision=None, storage_options=None, dtype_backend=<no_default>)[source]
         # Output
         self.outputfile = ''
         self.fill_value = ''
@@ -204,8 +292,8 @@ class prepSiteForcing(object):
         self.icos_meteo = ''
         self.icos_qc = 2
         # ERA5
-        self.erapath = '.'
-        self.eratype = 'era5-land-ts'
+        self.era5path = '.'
+        self.era5type = 'era5-land-ts'
         # CO2
         self.co2file = ''
         self.co2delimiter = ','
@@ -274,14 +362,14 @@ class prepSiteForcing(object):
             site_name, latitude, longitude, altitude
             reference_height, reference_height_wind,
             time2gmt, slope, aspect,
-            infile, delimiter, skiprows,
-            date_columns, date_format,
+            infile, sep, header, index_col, usecols,
+            skiprows, na_values, parse_dates, date_format,
             outputfile,
-            erapath
+            era5path
             startdate, enddate, timestep,
             ftimestep,
             imputation_method, keep_csv, rsl_yoyo
-            undef, fill_value,
+            fill_value,
             varnames, varunits
             dnames, dunits, anames
 
@@ -353,20 +441,15 @@ class prepSiteForcing(object):
         # Input
         if cfg.has_section('Input'):
             self.infile = cfg['Input'].get('inputfile', '')
-            self.delimiter = cfg['Input'].get('delimiter', None)
-            self.skiprows = str2int(cfg['Input'].get('skiprows', ''), 1)
-            self.date_columns = cfg['Input'].get('date_columns', None)
+            self.sep = cfg['Input'].get('sep', None)
+            self.header = parse_entry(cfg['Input'].get('header', 'infer'))
+            self.index_col = cfg['Input'].get('index_col', None)
+            self.usecols = parse_entry(cfg['Input'].get('usecols', None))
+            self.skiprows = parse_entry(cfg['Input'].get('skiprows', None))
+            self.na_values = parse_entry(cfg['Input'].get('na_values', None))
+            self.parse_dates = parse_entry(cfg['Input'].get('parse_dates', None))
             self.date_format = cfg['Input'].get('date_format', 'ISO8601')
             self.ftimestep = str2float(cfg['Input'].get('ftimestep', ''), 1.0)
-            self.undef = str2float(cfg['Input'].get('undef', ''), np.nan)
-        if (self.input == 'file') and self.infile:
-            if self.date_columns is None:
-                raise ValueError("'date_columns' must be given for inputfile"
-                                 " in config file")
-            else:
-                self.date_columns = [ int(vv)
-                                      for vv in self.date_columns.split(',')
-                                      if vv ]
 
         # Output
         if cfg.has_section('Output'):
@@ -393,9 +476,9 @@ class prepSiteForcing(object):
 
         # ERA5
         if cfg.has_section('ERA5'):
-            self.erapath = cfg['ERA5'].get('era', '.')
-            self.erapath = cfg['ERA5'].get('erapath', self.erapath)
-            self.eratype = cfg['ERA5'].get('eratype', 'era5-land-ts')
+            self.era5path = cfg['ERA5'].get('era', '.')
+            self.era5path = cfg['ERA5'].get('era5path', self.era5path)
+            self.era5type = cfg['ERA5'].get('era5type', 'era5-land-ts')
 
         # CO2
         if cfg.has_section('CO2'):
@@ -491,11 +574,11 @@ class prepSiteForcing(object):
             self.keep_csv = True
 
         if ((leco == 'musica') and self.rsl_yoyo and
-            (self.eratype.lower() not in
+            (self.era5type.lower() not in
              ['era5', 'era5-ts', 'era5-timeseries'])):
-            warnings.warn(f'eratype must be era5 or era5-ts if rsl_yoyo'
+            warnings.warn(f'era5type must be era5 or era5-ts if rsl_yoyo'
                           f' for {self.ecomodel}. Taking era5-ts.')
-            self.eratype = 'era5-ts'
+            self.era5type = 'era5-ts'
 
         if ((leco == 'musica') and (self.fill_value is not None)):
             warnings.warn(f'fill_value should be empty for {self.ecomodel}')
@@ -742,18 +825,16 @@ class prepSiteForcing(object):
         print(f'Read input file {infile}')
 
         navalues = ['NaN', 'NA', 'nan', 'NAN']
-        if (~np.isnan(self.undef)) and (self.undef is not None):
-            navalues.append(self.undef)
-        rcargs = {'sep': self.delimiter,
-                  'header': 0,
-                  'skiprows': (list(range(1,self.skiprows))
-                               if self.skiprows > 1 else None),
-                  # 'parse_dates': {'prep_datetime': self.date_columns},
-                  'parse_dates': self.date_columns,
-                  'date_format': self.date_format,
-                  'index_col': self.date_columns[0],
-                  'na_values': navalues,
-                  'skipinitialspace': True}
+        if self.na_values is not None:
+            navalues.extend(self.na_values)
+        rcargs = {'sep': self.sep,
+                  'header': self.header,
+                  'index_col': self.index_col,
+                  'usecols': self.usecols,
+                  'skiprows': self.skiprows,
+                  'na_values': self.na_values,
+                  'parse_dates': self.parse_dates,
+                  'date_format': self.date_format}
         df = pd.read_csv(infile, **rcargs)
 
         # remove units from columns names
@@ -781,6 +862,7 @@ class prepSiteForcing(object):
                     df = df.drop(columns=vdel)
         df = df[ll]
         self.dnames = dnames
+        print('SW01', df['SW_IN_1_1_1'])
 
         # fill standard vars with alternative vars
         for dd in self.anames:
@@ -789,6 +871,7 @@ class prepSiteForcing(object):
                 da = df.filter(regex=aa, axis=1).mean(axis=1)
                 vv = self.dnames[dd] # standard var
                 df[vv] = df[vv].where(df[vv].notna(), other=da)
+        print('SW02', df['SW_IN_1_1_1'])
 
         # select variables
         ll = []
@@ -796,6 +879,7 @@ class prepSiteForcing(object):
             if self.dnames[dd]:
                 ll.append(self.dnames[dd])
         df = df[ll]
+        print('SW03', df['SW_IN_1_1_1'])
 
         # rename vars to standard names,
         # making non-existent variables
@@ -804,6 +888,7 @@ class prepSiteForcing(object):
                 df.rename(columns={self.dnames[dd]: dd}, inplace=True)
             else:
                 df[dd] = np.nan
+        print('SW04', df['swdown'])
 
         # start and end dates        
         if startdate == '':
@@ -1282,10 +1367,10 @@ class prepSiteForcing(object):
         date = tmin.strftime(isoform) + '/' + tmax.strftime(isoform)
 
         print(f'Calling get_era5.py -a {area} -d {date},'
-              f' -p {self.erapath} -r {self.eratype}')
+              f' -p {self.era5path} -r {self.era5type}')
         era5files = get_era5(area=area, date=date,
-                             path=self.erapath,
-                             reanalysis_model=self.eratype)
+                             path=self.era5path,
+                             reanalysis_model=self.era5type)
 
         return era5files
 
@@ -2182,11 +2267,12 @@ class prepSiteForcing(object):
         if len(ocol) > 0:
             idf.rename(columns=ocol, inplace=True)
 
-        if np.isnan(self.undef) or (self.undef is None):
+        if isinstance(self.na_values, Iterable):
+            undef = self.na_values[0]
+        elif np.isnan(self.na_values) or (self.na_values is None):
             undef = 'NaN'
         else:
-            undef = self.undef
-            # undef = 'NaN'
+            undef = self.na_values
 
         # write file
         with tempfile.NamedTemporaryFile(mode='w', delete=False) as ff:

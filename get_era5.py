@@ -52,6 +52,8 @@ History
    * years -> date, Matthias Cuntz, Apr 2026
    * check time in files, not only on filenames, Matthias Cuntz, Apr 2026
    * era5-ts, Matthias Cuntz, Apr 2026
+   * Default format is netcdf instead of grib if not timeseries,
+     Matthias Cuntz, May 2026
 
 --------------------------------------------------------
 
@@ -105,7 +107,7 @@ def _get_era5_single_level5(
         Default: 'era5-land-ts'.
     output_format : string, optional
         File format of output file.
-        Default: 'grib' if era5 or era5-land, 'csv' if era5-land or
+        Default: 'netcdf' if era5 or era5-land, 'csv' if era5-ts or
         era5-land-ts.
         Output filenames will be suffixed by '.nc', '.grb' or '.csv',
         respectively.
@@ -279,7 +281,7 @@ def get_era5(varlist=[], area='90/-180/-90/180', date=None, path='.',
         Default: 'era5-land-ts'.
     output_format : string, optional
         File format of output file.
-        Default: 'grib' if era5 or era5-land, 'csv' if era5-ts or era5-land-ts.
+        Default: 'netcdf' if era5 or era5-land, 'csv' if era5-ts or era5-land-ts.
         Output filenames will be suffixed by '.nc', '.grb' or '.csv',
         respectively.
 
@@ -303,10 +305,6 @@ def get_era5(varlist=[], area='90/-180/-90/180', date=None, path='.',
     list
         Returns filenames of the output files, either the newly written
         files or the files that contain the requested output:
-
-    Warnings
-    --------
-    Existing files will only be checked by filename not by content.
 
     Examples
     --------
@@ -339,7 +337,7 @@ def get_era5(varlist=[], area='90/-180/-90/180', date=None, path='.',
         # It has a latency of about 5 days.
         latency = 10
         if not output_format:
-            output_format = 'grib'
+            output_format = 'netcdf'
         omodel = 'era5'
     elif (rmodel == 'era5-ts') or (rmodel == 'era5-timeseries'):
         resolution = 0.25
@@ -357,7 +355,7 @@ def get_era5(varlist=[], area='90/-180/-90/180', date=None, path='.',
         # But it seems to accept days that do not exist in the product yet.
         latency = 0
         if not output_format:
-            output_format = 'grib'
+            output_format = 'netcdf'
         omodel = 'era5-land'
     elif (rmodel == 'era5-land-ts') or (rmodel == 'era5-land-timeseries'):
         resolution = 0.1
@@ -761,7 +759,7 @@ if __name__ == "__main__":
                         default=output_format, dest='output_format',
                         metavar='format',
                         help=('Output format netcdf, grib, or csv.'
-                              ' (default: grib if era5 or era5-land,'
+                              ' (default: netcdf if era5 or era5-land,'
                               ' csv if era5-ts or era5-land-ts).'))
     parser.add_argument('-o', '--override', action='store_true',
                         default=override, dest='override',

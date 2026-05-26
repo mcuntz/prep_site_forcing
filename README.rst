@@ -19,11 +19,11 @@ using bias-corrected ERA5(-Land) data.
 The script reads information and options from a configuration file,
 then reads the input data and produces a csv file with imputed
 data. The script then calls a model specific version of
-`ascii2netcdf`, e.g. `ascii2musica`, that produces forcing data for
+``ascii2netcdf``, e.g. ``ascii2musica``, that produces forcing data for
 the ecosystem model in the very model-specific form. Currently there
-are the two model-specific scripts `ascii2isba.py` and
-`ascii2musica.py` extending the base class `ascii2Netcdf` from
-`class_ascii2netcdf.py`.
+are the two model-specific scripts ``ascii2isba.py`` and
+``ascii2musica.py`` extending the base class ``ascii2Netcdf`` from
+``class_ascii2netcdf.py``.
 
 
 Installation
@@ -41,16 +41,17 @@ and run the script:
 
    python prep_site_forcing.py FR-Hes.cfg
 
-You can see the check the results of the linear bias-correction of the
+You can check the results of the linear bias-correction of the
 ERA5(-Land) data by plotting them into a file:
 
 .. code-block:: bash
 
    python prep_site_forcing.py -p bias_correction.pdf -t pdf FR-Hes.cfg
 
-See `python prep_site_forcing.py -h` for help.
+See ``python prep_site_forcing.py -h`` for help.
 
 Requirements
+
    * cftime_
    * matplotlib_
    * netcdf4_
@@ -59,22 +60,24 @@ Requirements
    * pyjams_
    * scipy_
    * xarray_
+
 as well as
-   * cdsapi_  if ERA5 must be downloaded
-   * `icoscp_core`_  if ICOS data is used
+
+   * cdsapi_  if ERA5 must be downloaded; needs a Copernicus account (see Section [ERA5])
+   * `icoscp_core`_  if ICOS data is used (see Section [ICOS])
 
 
 Config file
 -----------
 
-The driver script `prep_site_forcing.py` is controlled by a
+The driver script ``prep_site_forcing.py`` is controlled by a
 configuration file, which is in the simple Python configparser
 format. It has sections with case-sensitive names in brackets,
-e.g. `[Site]`, and case-insensitive options within each
-section. Mandatory sections are `[Model]`, `[Site]`, and
-`[VarNames]`. Further, the option `input` in `[Options]` must be set.
+e.g. ``[Site]``, and case-insensitive options within each
+section. Mandatory sections are ``[Model]``, ``[Site]``, and
+``[VarNames]``. Further, the option ``input`` in ``[Options]`` must be set.
 
-See `FR-Hes.cfg` for an example that can be used as a template for
+See ``FR-Hes.cfg`` for an example that can be used as a template for
 other sites. The example files is highly commented and should be
 rather self-explaining. Or see the explanations below.
 
@@ -82,8 +85,8 @@ rather self-explaining. Or see the explanations below.
 Section [Model]
 ^^^^^^^^^^^^^^^
 
-The `model` name must be given. This is mostly used to call the
-correct `ascii2netcdf` script.
+The ``model`` name must be given. This is mostly used to call the
+correct ``ascii2netcdf`` script.
 
 For example:
 
@@ -98,35 +101,35 @@ Section [Options]
 
 There are several general options.
 
-`input` tells, which data should be taken. It can be `file`, `ICOS`,
-or `ERA5`. If it is `file`, the section `[Input]` will be used and
-data will be read from a local file. If `input` is set to `ICOS`, the
-section `[ICOS]` will be used and data is downloaded from the ICOS
-Carbon Portal or read from a local file in ICOS convention. If `input`
-is `ERA5`, the section `ERA5` will be used and data downloaded from
+``input`` tells, which data should be taken. It can be ``file``, ``ICOS``,
+or ``ERA5``. If it is ``file``, the section ``[Input]`` will be used and
+data will be read from a local file. If ``input`` is set to ``ICOS``, the
+section ``[ICOS]`` will be used and data is downloaded from the ICOS
+Carbon Portal or read from a local file in ICOS convention. If ``input``
+is ``ERA5``, the section ``ERA5`` will be used and data downloaded from
 the Copernicus archive or read from local files will be used directly
 as forcing data. There is no default value.
 
 A Mean Absolute Deviation (MAD) filter can be applied to the input
-data to catch outliers. Set `mad_z` greater than zero to apply an MAD
-filter with `z = mad_z`. Default is not to apply an MAD filter (`mad_z
-= 0`).
+data to catch outliers. Set ``mad_z`` greater than zero to apply an MAD
+filter with ``z = mad_z``. Default is not to apply an MAD filter (``mad_z
+= 0``).
 
 The imputation method can be chosen. Currently there is linear
-interpolation (`imputation_method = 0`) to fill gaps or using
+interpolation (``imputation_method = 0``) to fill gaps or using
 ERA5(-Land) data that gets bias-corrected with the existing local data
-(`imputation_method = 1`; Vuichard and Papale, ESSD 2013,
+(``imputation_method = 1``; Vuichard and Papale, ESSD 2013,
 https://doi.org/10.5194/essd-7-157-2015). Default is
-`imputation_method = 1`.
+``imputation_method = 1``.
 
-`make_netcdf` controls if a function `ascii2netcdf` from a file
-`ascii2netcdf.py` will be called. 'netcdf' is thereby replaced by the
-lowercase model name. If `make_netcdf = False`, the script stops after
+``make_netcdf`` controls if a function ``ascii2netcdf`` from a file
+``ascii2netcdf.py`` will be called. 'netcdf' is thereby replaced by the
+lowercase model name. If ``make_netcdf = False``, the script stops after
 production of the csv file (this implies that the next option is True,
-i.e. `keep_csv = True`). Default is `make_netcdf = True`.
+i.e. ``keep_csv = True``). Default is ``make_netcdf = True``.
 
-If `keep_csv` is True, then the csv file will not be deleted after
-calling `ascii2netcdf`. Default is `keep_csv = False`.
+If ``keep_csv`` is True, then the csv file will not be deleted after
+calling ``ascii2netcdf``. Default is ``keep_csv = False``.
 
 For example:
 
@@ -143,14 +146,14 @@ For example:
 Section [Site]
 ^^^^^^^^^^^^^^
 
-Data in the `[Site]` section is mostly used to write it into the
-netcdf files.  The site `name` is basically for information but it is
-also used as site id for ICOS stations. `latitude` and `longitude` are
-also used to download or extract ERA5(-Land) data. `latitude` is
-from -90 to 90 and `longitude` is from -180 to 180. Units of
-`altitude` and `reference_height` are meter (m). `reference_height` is
+Data in the ``[Site]`` section is mostly used to write it into the
+netcdf files.  The site ``name`` is basically for information but it is
+also used as site id for ICOS stations. ``latitude`` and ``longitude`` are
+also used to download or extract ERA5(-Land) data. ``latitude`` is
+from -90 to 90 and ``longitude`` is from -180 to 180. Units of
+``altitude`` and ``reference_height`` are meter (m). ``reference_height`` is
 the height where temperature and humidity were measured. There are no
-defaults except `altitude = 0` and `reference_height = 2`.
+defaults except ``altitude = 0`` and ``reference_height = 2``.
 
 For example:
 
@@ -168,10 +171,10 @@ Section [ISBA]
 ^^^^^^^^^^^^^^
 
 There a three options specific to the land surface model
-ISBA. `reference_height_wind` is the height where wind speed was
-measured (m). `slope` and `aspect` are the terrain slope and aspect in
-degrees. Defaults are that `reference_height_wind` is the same as
-`reference_height`, as well as `slope = 0` and `aspect = 0`.
+ISBA. ``reference_height_wind`` is the height where wind speed was
+measured (m). ``slope`` and ``aspect`` are the terrain slope and aspect in
+degrees. Defaults are that ``reference_height_wind`` is the same as
+``reference_height``, as well as ``slope = 0`` and ``aspect = 0``.
 
 For example:
 
@@ -186,15 +189,15 @@ For example:
 Section [MuSICA]
 ^^^^^^^^^^^^^^^^
 
-There a two options specific to the ecosystem model MuSICA. `time2gmt`
+There a two options specific to the ecosystem model MuSICA. ``time2gmt``
 is difference between local time and GMT (-12 to 12). The information
-will be passed to `ascii2musica`, which adds to the attribute
-`time_origin` of the time variable of the netCDF file. If `rsl_yoyo`
+will be passed to ``ascii2musica``, which adds to the attribute
+``time_origin`` of the time variable of the netCDF file. If ``rsl_yoyo``
 is True, then the boundary layer height of ERA5 will be added to the
-output file(s). Note that the variable `boundary_layer_height` or
-`h_sbl` is not in ERA5-Land but only in ERA5. So forcing files for
+output file(s). Note that the variable ``boundary_layer_height`` or
+``h_sbl`` is not in ERA5-Land but only in ERA5. So forcing files for
 runs with the so-called 'yoyo' in MuSICA must use ERA5 data instead of
-ERA5-Land data. Defaults are `time2gmt = 0` and `rsl_yoyo = False`.
+ERA5-Land data. Defaults are ``time2gmt = 0`` and ``rsl_yoyo = False``.
 
 For example:
 
@@ -208,19 +211,19 @@ For example:
 Section [Input]
 ^^^^^^^^^^^^^^^^
 
-If `input = file` in the section `[Options]`, data will be read from
-`inputfile` using `pandas.read_csv`_. The options `sep`, `header`,
-`index_col`, `usecols`, `skiprows`, `na_values`, `parse_dates`, and
-`date_format` are implemented, which allows to read a vast majority of
+If ``input = file`` in the section ``[Options]``, data will be read from
+``inputfile`` using `pandas.read_csv`_. The options ``sep``, ``header``,
+``index_col``, ``usecols``, ``skiprows``, ``na_values``, ``parse_dates``, and
+``date_format`` are implemented, which allows to read a vast majority of
 data files. Please see the documentation of `pandas.read_csv`_ for
 details.
 
-`ftimestep` indicates which time point is represented by the time
-information in the input file. `0` means that the times represent the
-beginning of the time steps, `0.5` the middle, and `1` the end of time
+``ftimestep`` indicates which time point is represented by the time
+information in the input file. ``0`` means that the times represent the
+beginning of the time steps, ``0.5`` the middle, and ``1`` the end of time
 steps. MuSICA, for example, is using the middle of the time step and
 ISBA is using the end of the time step in their forcing files. Time
-steps will hence be shifted appropriately in the `ascii2netcdf`
+steps will hence be shifted appropriately in the ``ascii2netcdf``
 routines (not yet in the csv file).
 
 For example:
@@ -243,15 +246,15 @@ For example:
 Section [Output]
 ^^^^^^^^^^^^^^^^
 
-Section `[Output]` gives the netCDF output filename. Default is the
-input file name with the suffix replaced by .nc if `input = file`, or
-`prep_site_forcing.nc` otherwise. The name of the csv file is the name
-of the output file with suffix replaced by .csv. `fill_value` is the
+Section ``[Output]`` gives the netCDF output filename. Default is the
+input file name with the suffix replaced by .nc if ``input = file``, or
+``prep_site_forcing.nc`` otherwise. The name of the csv file is the name
+of the output file with suffix replaced by .csv. ``fill_value`` is the
 missing value used in the netCDF file, which are highly model
-specific. For example, MuSICA is using the netCDF default `_FillValue`
-(`fill_value =`), while ISBA is using `fill_value = -9999999`.
+specific. For example, MuSICA is using the netCDF default ``_FillValue``
+(``fill_value =``), while ISBA is using ``fill_value = -9999999``.
 
-`startdate` and `enddate` (both inclusive) can be given in ISO8601 format (e.g. 1994-12-31 23:30) to restrict the forcing file between the two dates. Defaults are the first and last dates of the input file. `startdate`, `enddate`, and `timestep` have to be given if `input` is not `file`, i.e. either ICOS or ERA5(-Land). In this cases, `timestep` will be the time step of the output file (by linear interpolation from hourly ICOS or ERA5(-Land) data). Notation such as 1800s or 30min can be used (`pandas timeseries`_).
+``startdate`` and ``enddate`` (both inclusive) can be given in ISO8601 format (e.g. 1994-12-31 23:30) to restrict the forcing file between the two dates. Defaults are the first and last dates of the input file. ``startdate``, ``enddate``, and ``timestep`` have to be given if ``input`` is not ``file``, i.e. either ICOS or ERA5(-Land). In this cases, ``timestep`` will be the time step of the output file (by linear interpolation from hourly ICOS or ERA5(-Land) data). Notation such as 1800s or 30min can be used (`pandas timeseries`_).
 
 For example:
 
@@ -268,26 +271,26 @@ For example:
 Section [ICOS]
 ^^^^^^^^^^^^^^
 
-Input can also come directly from the ICOS Carbon Portal (`input = ICOS`) using the `[Site].name` as station id. One has to have the Python library `icoscp_core`_ installed and have it initialised with:
+Input can also come directly from the ICOS Carbon Portal (``input = ICOS``) using the ``[Site].name`` as station id. One has to have the Python library `icoscp_core`_ installed and have it initialised with:
 
 .. code-block:: python
 
    from icoscp_core.icos import auth
    auth.init_config_file()
 
-Known `icos_product` are L2, NRT, and Fluxnet. For `icos_meteo`, one
+Known ``icos_product`` are L2, NRT, and Fluxnet. For ``icos_meteo``, one
 can use the original Meteosens stream for L2 and NRT, which gives the
 individual meteorological variables such as SW_IN_1_1_1 and
 SW_IN_1_1_2. Or one uses the Meteo stream, which are all redundant
 variables aggregated, such as SW_IN. Or one uses the Fluxnet meteo
 stream, which gives gap-filled aggregated variables such as SW_IN_F.
-`icos_product = Fluxnet` includes not only ICOS data but also pre-ICOS
+``icos_product = Fluxnet`` includes not only ICOS data but also pre-ICOS
 data for the site in the same gap-filled Fluxnet meteo
-format. `icos_meteo` is ignored in this case.
+format. ``icos_meteo`` is ignored in this case.
 
-`icos_product` can also name of a local file in a appropriate standard
-format, i.e. it can be read with `df = pd.read_csv(file, index_col=0,
-parse_dates=True, date_format='ISO8601', na_values='-9999')`. In this case, the units must be part of the header row, e.g. SW_IN (W m-2). For example:
+``icos_product`` can also name of a local file in a appropriate standard
+format, i.e. it can be read with ``df = pd.read_csv(file, index_col=0,
+parse_dates=True, date_format='ISO8601', na_values='-9999')``. In this case, the units must be part of the header row, e.g. SW_IN (W m-2). For example:
 
 .. code-block:: bash
 
@@ -295,10 +298,10 @@ parse_dates=True, date_format='ISO8601', na_values='-9999')`. In this case, the 
    2025-12-31 23:00:00,432.47,...
 
 Such a file can be produced, for example, using the function
-`write_icos` in `icos.py`.
+``write_icos`` in ``icos.py``.
 
-One can use the quality flag for aggregated variables. `icos_qc = 2`
-uses all data, and `icos_qc = 0` uses only the original, measured
+One can use the quality flag for aggregated variables. ``icos_qc = 2``
+uses all data, and ``icos_qc = 0`` uses only the original, measured
 data. Filling of data gaps will then be done with ERA5(-Land) data
 (see below).
 
@@ -319,21 +322,21 @@ Missing data can be filled with ERA5 reanalysis data. There are the
 products ERA5 and ERA5-land, which are on different resolutions (0.25
 vs 0.1 degree). They are also stored in different formats, grib and
 zarr. The latter is optimised for remote access. This is indicated by
-'-ts' in the `era5type` name. It should generally be `era5type =
-era5-land-ts`. ERA5-Land has no boundary layer height. So if
-`boundary_layer_height` (or `h_sbl`) is needed, such as in the case of
-`rsl_yoyo = True`, then `era5type = era5-ts` is preferred. The script
-will warn if `era5type` is `era5-land-ts` and set it to `era5-ts`.
+'-ts' in the ``era5type`` name. It should generally be ``era5type =
+era5-land-ts``. ERA5-Land has no boundary layer height. So if
+``boundary_layer_height`` (or ``h_sbl``) is needed, such as in the case of
+``rsl_yoyo = True``, then ``era5type = era5-ts`` is preferred. The script
+will warn if ``era5type`` is ``era5-land-ts`` and set it to ``era5-ts``.
 
-The script calls the function `get_era5` from the file
-`get_era5.py`. One needs the Python library `cdsapi` and a Copernicus
+The script calls the function ``get_era5`` from the file
+``get_era5.py``. One needs the Python library ``cdsapi`` and a Copernicus
 account (see how-to-api_). The check the files in the directory
-`era5path` depending on the output format wanted, which is netcdf if
-era5 or era5-land (`*.nc*`) and csv if era5-ts or era5-land-ts
-(`*.csv`). It check for available variables and timesteps and
+``era5path`` depending on the output format wanted, which is netcdf if
+era5 or era5-land (``*.nc*``) and csv if era5-ts or era5-land-ts
+(``*.csv``). It check for available variables and timesteps and
 downloads the missing information.
 
-If `input = ERA5` in `[Options]`, then the ERA data will directly used
+If ``input = ERA5`` in ``[Options]``, then the ERA data will directly used
 as forcing data.
 
 For example:
@@ -349,13 +352,13 @@ Section [CO2]
 ^^^^^^^^^^^^^
 
 Most ecosystem models need atmospheric CO2 concentrations. Missing
-data will be filled using a simple input file `co2file`. The CO2 data
-provided (`cmip6_co2_hist-ssp370_1850-2100.csv`) are annual mean
+data will be filled using a simple input file ``co2file``. The CO2 data
+provided (``cmip6_co2_hist-ssp370_1850-2100.csv``) are annual mean
 values from 1850 to 2100 from the CMIP6 SSP3.7 scenario. They are
-delimited by comma (`co2delimiter = ,`) with a decimal date in the
-first column (`co2date_column = 0`) and CO2 mixing ratios in ppm in
-the second column (`co2co2_column = 1`). More sophisticated filling
-should replace the method `fill_co2`.
+delimited by comma (``co2delimiter = ,``) with a decimal date in the
+first column (``co2date_column = 0``) and CO2 mixing ratios in ppm in
+the second column (``co2co2_column = 1``). More sophisticated filling
+should replace the method ``fill_co2``.
 
 For example:
 
@@ -382,25 +385,25 @@ liquid (rainf) and solid (snowf) precipitation.
 
 So one has to give the names in the input file or data stream that
 corresponds to the above variables. One has to give namely
-`name_swdown`, `name_lwdown`, `name_psurf`, `name_tair`, `name_qair`,
-`name_wind_speed`, `name_co2air`, and optionally `name_wind_dir`. One
-has to give further either `name_precip`, or both `name_rainf` and
-`name_snowf`. Humidity (qair) can be relative humidity, specific
+``name_swdown``, ``name_lwdown``, ``name_psurf``, ``name_tair``, ``name_qair``,
+``name_wind_speed``, ``name_co2air``, and optionally ``name_wind_dir``. One
+has to give further either ``name_precip``, or both ``name_rainf`` and
+``name_snowf``. Humidity (qair) can be relative humidity, specific
 humidity, or vapour pressure deficit (VPD). The variable will be
 identified bu its unit (see below).
 
-The names can be regular expression such as `TA_.*_1_1`. Columns will
-be filtered, which uses `re.search(name,
-available_variables)`. Variables will be averaged over all columns
-found. The filtering with `re.search`_ implies that the name `Var_1`,
-for example, also finds columns named `Var_2/Var_1`, `Var_1_QC`, or
-similar. In this case, one can start the variable name with `^`,
-i.e. `^Var_1` in this case, or end it with `$`, i.e. `Var_1$`, for
+The names can be regular expression such as ``TA_.*_1_1``. Columns will
+be filtered, which uses ``re.search(name,
+available_variables)``. Variables will be averaged over all columns
+found. The filtering with ``re.search``_ implies that the name ``Var_1``,
+for example, also finds columns named ``Var_2/Var_1``, ``Var_1_QC``, or
+similar. In this case, one can start the variable name with ``^``,
+i.e. ``^Var_1`` in this case, or end it with ``$``, i.e. ``Var_1$``, for
 example.
 
 The ICOS Fluxnet product has for each variable also quality control
-columns, e.g. `TA_F` and `TA_F_QC`. So one would end the variables
-with `$` and the section `[VarNames]` would look like:
+columns, e.g. ``TA_F`` and ``TA_F_QC``. So one would end the variables
+with ``$`` and the section ``[VarNames]`` would look like:
 
 .. code-block:: python
 
@@ -415,11 +418,11 @@ with `$` and the section `[VarNames]` would look like:
    name_wind_speed = WS_F$
    name_precip = P_F$
 
-The ICOS Meteo products have aggregated variables, e.g. `TA` as an
+The ICOS Meteo products have aggregated variables, e.g. ``TA`` as an
 average over all air temperature measurements on top of the tower. But
-they also have a temperature profile with the variables `TA_1`,
-`TA_2`, ... So one would also end the variables with `$` and the
-section `[VarNames]` would look like:
+they also have a temperature profile with the variables ``TA_1``,
+``TA_2``, ... So one would also end the variables with ``$`` and the
+section ``[VarNames]`` would look like:
 
 .. code-block:: python
 
@@ -435,7 +438,7 @@ section `[VarNames]` would look like:
    name_precip = P$
 
 The ICOS Meteosens products have the individual sensors such as
-`TA_1_1_1`. One can decide to average over all or some of the sensors
+``TA_1_1_1``. One can decide to average over all or some of the sensors
 with the regular expressions, or rather use simply one sensor and use
 the redundant measurements only when the primary sensor has missing
 data (see section [AlternativeVarNames] below). For example, take
@@ -458,8 +461,8 @@ precipitation:
 
 The files for the historical data at FR-Hes used individual names and
 had also calculated columns such as the ratio between one PAR sensor
-and one global radiation sensor `PAR_JY/Rg_Kipp H1`, so that shortwave
-incoming radiation would be `^Rg_Kipp H1`:
+and one global radiation sensor ``PAR_JY/Rg_Kipp H1``, so that shortwave
+incoming radiation would be ``^Rg_Kipp H1``:
 
 .. code-block:: python
 
@@ -475,9 +478,9 @@ incoming radiation would be `^Rg_Kipp H1`:
    name_precip = Prec H1
 
 MuSICA might need more forcing variables such as isotopic forcing
-data. Extra variables `extra_vars` can hence be extracted from the
+data. Extra variables ``extra_vars`` can hence be extracted from the
 input file and data stream and written into the output file with the
-names `extra_names`. Note that these variables will not be imputed. Adding soil moisture and soil heat flux from the historical FR-Hes data to the forcing file would be:
+names ``extra_names``. Note that these variables will not be imputed. Adding soil moisture and soil heat flux from the historical FR-Hes data to the forcing file would be:
 
 .. code-block:: python
 
@@ -499,9 +502,9 @@ Section [AlternativeVarNames]
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Instead of averaging variables such as primary and backup air
-temperature `TA_._1_1`, one could also use one sensor and only fill in
+temperature ``TA_._1_1``, one could also use one sensor and only fill in
 data from another sensor in case of missing data. This 'backup'
-variables can be given in the section `[AlternativeVarNames]`. The
+variables can be given in the section ``[AlternativeVarNames]``. The
 alternative variables have to have the same units as the primary
 variables. Using only the main sensors of the ICOS meteosens and only
 filling in the backup sensors in case of missing data would give:
@@ -535,7 +538,7 @@ Section [VarUnits]
 ^^^^^^^^^^^^^^^^^^
 
 The script has to know the units of the variables, which are given in
-the section `[VarUnits]`. Known units are:
+the section ``[VarUnits]``. Known units are:
    * ['W/m2', 'W m-2'] for shortave and longwave radiation
    * ['C', 'degreeC', 'degree C', 'degC', 'deg C', '°C'] for air
      temperature (otherwise Kelvin assumed)
@@ -567,9 +570,9 @@ For example:
    unit_rainf = mm
    unit_snowf = mm
 
-`[VarUnits]` is ignored in case `input` is `ICOS` or `ERA5`. If the
-`icos_product` is a local file, then the units must be in the header
-row (see section `[ICOS]`).
+``[VarUnits]`` is ignored in case ``input`` is ``ICOS`` or ``ERA5``. If the
+``icos_product`` is a local file, then the units must be in the header
+row (see section ``[ICOS]``).
 
 
 License

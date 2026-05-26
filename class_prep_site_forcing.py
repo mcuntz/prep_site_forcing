@@ -862,7 +862,6 @@ class prepSiteForcing(object):
                     df = df.drop(columns=vdel)
         df = df[ll]
         self.dnames = dnames
-        print('SW01', df['SW_IN_1_1_1'])
 
         # fill standard vars with alternative vars
         for dd in self.anames:
@@ -871,7 +870,6 @@ class prepSiteForcing(object):
                 da = df.filter(regex=aa, axis=1).mean(axis=1)
                 vv = self.dnames[dd] # standard var
                 df[vv] = df[vv].where(df[vv].notna(), other=da)
-        print('SW02', df['SW_IN_1_1_1'])
 
         # select variables
         ll = []
@@ -879,7 +877,6 @@ class prepSiteForcing(object):
             if self.dnames[dd]:
                 ll.append(self.dnames[dd])
         df = df[ll]
-        print('SW03', df['SW_IN_1_1_1'])
 
         # rename vars to standard names,
         # making non-existent variables
@@ -888,7 +885,6 @@ class prepSiteForcing(object):
                 df.rename(columns={self.dnames[dd]: dd}, inplace=True)
             else:
                 df[dd] = np.nan
-        print('SW04', df['swdown'])
 
         # start and end dates        
         if startdate == '':
@@ -1187,7 +1183,7 @@ class prepSiteForcing(object):
                     mask = df[cc_qc] <= self.icos_qc
                     print(f'    {cc}: {df.shape[0] - mask.sum()}')
                     df[cc] = df[cc].where(mask, other=np.nan)
-        
+
         # select variables
         print('Aggregate variables')
         dnames = self.dnames.copy()
@@ -1207,7 +1203,22 @@ class prepSiteForcing(object):
                     df = df.drop(columns=vdel)
         df = df[ll]
         self.dnames = dnames
-        
+
+        # fill standard vars with alternative vars
+        for dd in self.anames:
+            aa = self.anames[dd]     # alternative var
+            if aa:
+                da = df.filter(regex=aa, axis=1).mean(axis=1)
+                vv = self.dnames[dd] # standard var
+                df[vv] = df[vv].where(df[vv].notna(), other=da)
+
+        # select variables
+        ll = []
+        for dd in self.dnames:   # standard and extra vars
+            if self.dnames[dd]:
+                ll.append(self.dnames[dd])
+        df = df[ll]
+
         # rename vars to standard names,
         # making non-existent variables
         for dd in self.dnames:
@@ -1215,7 +1226,7 @@ class prepSiteForcing(object):
                 df.rename(columns={self.dnames[dd]: dd}, inplace=True)
             else:
                 df[dd] = np.nan
-        
+
         # update unit dictionary
         for dd in self.dnames:   # standard and extra vars
             if self.dnames[dd]:
@@ -1944,13 +1955,14 @@ class prepSiteForcing(object):
         if imputation_method is None:
             imputation_method = self.imputation_method
 
-        era5files = self.get_era5_files(df)
-        print(f'Open ERA5 files {era5files}')
-        ds = self.open_era5_files(era5files)
-        era5dt = self.get_era5_timestep_seconds(ds)
+        if self.imputation_method == 1:
+            era5files = self.get_era5_files(df)
+            print(f'Open ERA5 files {era5files}')
+            ds = self.open_era5_files(era5files)
+            era5dt = self.get_era5_timestep_seconds(ds)
+            iforecast = self.check_forecast(ds)
 
         print('Fill')
-        iforecast = self.check_forecast(ds)
         plotdict = dict()
         for dd in self.dnames:
             if (dd == 'precip') or (dd == 'rainf'):
@@ -1961,66 +1973,86 @@ class prepSiteForcing(object):
             if any(df[dd].isna()):
                 print(f'    {dd}')
                 if dd == 'swdown':
-                    evar = ds['ssrd']
-                    if iforecast:
-                        evar.values = self.era5_cumulative_to_hourly(evar)
-                    evar = evar / era5dt  # mean W/m2
+                    if self.imputation_method == 1:
+                        evar = ds['ssrd']
+                        if iforecast:
+                            evar.values = self.era5_cumulative_to_hourly(evar)
+                        evar = evar / era5dt  # mean W/m2
+                    else:
+                        evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
                     df[dd], pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+
                     plotdict[pkey].update(pdict)
                 elif dd == 'lwdown':
-                    evar = ds['strd']
-                    if iforecast:
-                        evar.values = self.era5_cumulative_to_hourly(evar)
-                    evar = evar / era5dt  # mean W/m2
+                    if self.imputation_method == 1:
+                        evar = ds['strd']
+                        if iforecast:
+                            evar.values = self.era5_cumulative_to_hourly(evar)
+                        evar = evar / era5dt  # mean W/m2
+                    else:
+                        evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
                     df[dd], pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
                     plotdict[pkey].update(pdict)
                 elif dd == 'psurf':
-                    evar = ds['sp']
+                    if self.imputation_method == 1:
+                        evar = ds['sp']
+                    else:
+                        evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
                     df[dd], pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
                     plotdict[pkey].update(pdict)
                 elif dd == 'qair':
-                    d2m  = ds['d2m']
-                    pres = ds['sp']
-                    evar = pj.eair2shair(pj.esat(d2m), pres)  # kg/kg
+                    if self.imputation_method == 1:
+                        d2m  = ds['d2m']
+                        pres = ds['sp']
+                        evar = pj.eair2shair(pj.esat(d2m), pres)  # kg/kg
+                    else:
+                        evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
                     df[dd], pdict = self.impute_data(
                         df[dd], evar, imputation_method=imputation_method)
                     plotdict[pkey].update(pdict)
                 elif dd == 'tair':
-                    evar = ds['t2m']
+                    if self.imputation_method == 1:
+                        evar = ds['t2m']
+                    else:
+                        evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
                     df[dd], pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
                     plotdict[pkey].update(pdict)
                 elif dd == 'wind_speed':
-                    vu10, vv10 = self.get_era5_windspeed_names(ds)
-                    u10 = ds[vu10]
-                    v10 = ds[vv10]
-                    evar = np.sqrt(u10**2 + v10**2)
+                    if self.imputation_method == 1:
+                        vu10, vv10 = self.get_era5_windspeed_names(ds)
+                        u10 = ds[vu10]
+                        v10 = ds[vv10]
+                        evar = np.sqrt(u10**2 + v10**2)
+                    else:
+                        evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
                     df[dd], pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
                     plotdict[pkey].update(pdict)
                 elif dd == 'h_sbl':
-                    sbl = ds['blh']
-                    evar = sbl * 0.1
-                    if isinstance(evar, (pd.DataFrame, pd.Series)):
-                        ivar = np.interp(df.index, evar.index, evar)
-                    elif isinstance(evar, xr.DataArray):
-                        vtime = self.get_era5_time_name(evar)
-                        ivar = np.interp(df.index, evar[vtime], evar)
-                    df[dd] = df[dd].where(df[dd].notna(), other=ivar)
+                    if self.imputation_method == 1:
+                        sbl = ds['blh']
+                        evar = sbl * 0.1
+                        if isinstance(evar, (pd.DataFrame, pd.Series)):
+                            ivar = np.interp(df.index, evar.index, evar)
+                        elif isinstance(evar, xr.DataArray):
+                            vtime = self.get_era5_time_name(evar)
+                            ivar = np.interp(df.index, evar[vtime], evar)
+                        df[dd] = df[dd].where(df[dd].notna(), other=ivar)
                 elif (dd == 'precip') or (dd == 'rainf'):
                     # data - rain, snow, and total precip
                     if dd == 'precip':
@@ -2031,19 +2063,19 @@ class prepSiteForcing(object):
                         rainf = df[dd]
                         snowf = df['snowf']
                     dvar = (rainf + snowf) / dt
-                    # era5 - total precip
-                    evar = ds['tp']  # m
-                    # there is always noise in the ERA5 data ~ 1e-18
-                    evar = evar.where(evar > np.finfo(float).eps, other=0.)
-                    if iforecast:
-                        evar.values = self.era5_cumulative_to_hourly(evar)
-                    evar = evar * 1000. / era5dt  # mean mm/s = kg/m2/s
                     if imputation_method == 0:
                         df[dd] = df[dd].where(df[dd].notna(), other=0.)
                         if dd != 'precip':
                             df['snow'] = df['snow'].where(df['snow'].notna(),
                                                           other=0.)
                     elif imputation_method == 1:
+                        # era5 - total precip
+                        evar = ds['tp']  # m
+                        # there is always noise in the ERA5 data ~ 1e-18
+                        evar = evar.where(evar > np.finfo(float).eps, other=0.)
+                        if iforecast:
+                            evar.values = self.era5_cumulative_to_hourly(evar)
+                        evar = evar * 1000. / era5dt  # mean mm/s = kg/m2/s
                         plotdict.update({pkey: {'data': dvar, 'era': evar}})
                         ivar, pdict = self.linear_fit_data_vs_era5(
                             dvar, evar, daily=True)
@@ -2075,11 +2107,12 @@ class prepSiteForcing(object):
             else:
                 plotdict.update({pkey: None})
 
-        self.plot_filled(ds, plotdict,
-                         outtype=outtype, plotname=plotname)
+        if self.imputation_method == 1:
+            self.plot_filled(ds, plotdict,
+                             outtype=outtype, plotname=plotname)
 
-        if isinstance(ds, xr.DataArray):
-            ds.close()
+            if isinstance(ds, xr.DataArray):
+                ds.close()
 
         return df
 

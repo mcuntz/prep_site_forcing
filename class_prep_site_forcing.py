@@ -2369,7 +2369,7 @@ class prepSiteForcing(object):
             keep_csv = self.keep_csv
 
         leco = self.ecomodel.lower()  # musica, isba
-        exec(f'from ascii2{leco} import ascii2{leco}', globals=globals())
+        exec(f'from ascii2{leco} import ascii2{leco}', globals())
         print(f'Write netcdf {self.outputfile}')
 
         kwargs = {

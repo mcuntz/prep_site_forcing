@@ -563,6 +563,10 @@ class prepSiteForcing(object):
                 raise ValueError(
                     'startdate and enddate must be given if no input file'
                     ' nor ICOS data.')
+            if self.imputation_method != 1:
+                warnings.warn('input=ERA5 implies imputation_method=1.'
+                              ' Setting imputation_method=1.')
+                self.imputation_method = 1
 
         if self.imputation_method > 1:
             raise ValueError(f'imputation_method = {self.imputation_method} not'
@@ -2088,18 +2092,22 @@ class prepSiteForcing(object):
                             if isinstance(tair, (pd.DataFrame, pd.Series)):
                                 tair = tair.loc[(tair.index >= df.index[0]) &
                                                 (tair.index <= df.index[-1])]
+                                ttair = tair.index
                             elif isinstance(tair, xr.DataArray):
                                 if 'time' in tair:
                                     tair = tair.loc[
                                         (tair['time'] >= df.index[0]) &
                                         (tair['time'] <= df.index[-1])]
+                                    ttair = tair['time']
                                 elif 'valid_time' in tair:
                                     tair = tair.loc[
                                         (tair['valid_time'] >= df.index[0]) &
-                                        (tair['valiedtime'] <= df.index[-1])]
+                                        (tair['valid_time'] <= df.index[-1])]
+                                    ttair = tair['valid_time']
                                 else:
                                     ValueError(
                                         'time variable not found in ERA5 data')
+                            tair = np.interp(df.index, ttair, tair)
                             rainf = np.where(tair >= 274.15, ivar, 0.)
                             snowf = np.where(tair < 274.15, ivar, 0.)
                             df[dd] = df[dd].where(df[dd].notna(), other=rainf)

@@ -1906,7 +1906,7 @@ class prepSiteForcing(object):
             ii = df.notna()
             if ii.sum() == 0:
                 warnings.warn(f'No valid data point in {df.name}')
-                return df
+                return df, pdict
             ivar = np.interp(df.index,
                              df.index[ii],
                              df.loc[ii])
@@ -1984,7 +1984,6 @@ class prepSiteForcing(object):
                     df[dd], pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
-
                     plotdict[pkey].update(pdict)
                 elif dd == 'lwdown':
                     if self.imputation_method == 1:
@@ -2066,8 +2065,8 @@ class prepSiteForcing(object):
                     if imputation_method == 0:
                         df[dd] = df[dd].where(df[dd].notna(), other=0.)
                         if dd != 'precip':
-                            df['snow'] = df['snow'].where(df['snow'].notna(),
-                                                          other=0.)
+                            df['snowf'] = df['snowf'].where(
+                                df['snowf'].notna(), other=0.)
                     elif imputation_method == 1:
                         # era5 - total precip
                         evar = ds['tp']  # m
@@ -2090,8 +2089,17 @@ class prepSiteForcing(object):
                                 tair = tair.loc[(tair.index >= df.index[0]) &
                                                 (tair.index <= df.index[-1])]
                             elif isinstance(tair, xr.DataArray):
-                                tair = tair.loc[(tair['time'] >= df.index[0]) &
-                                                (tair['time'] <= df.index[-1])]
+                                if 'time' in tair:
+                                    tair = tair.loc[
+                                        (tair['time'] >= df.index[0]) &
+                                        (tair['time'] <= df.index[-1])]
+                                elif 'valid_time' in tair:
+                                    tair = tair.loc[
+                                        (tair['valid_time'] >= df.index[0]) &
+                                        (tair['valiedtime'] <= df.index[-1])]
+                                else:
+                                    ValueError(
+                                        'time variable not found in ERA5 data')
                             rainf = np.where(tair >= 274.15, ivar, 0.)
                             snowf = np.where(tair < 274.15, ivar, 0.)
                             df[dd] = df[dd].where(df[dd].notna(), other=rainf)
@@ -2353,7 +2361,7 @@ class prepSiteForcing(object):
             keep_csv = self.keep_csv
 
         leco = self.ecomodel.lower()  # musica, isba
-        exec(f'from ascii2{leco} import ascii2{leco}')
+        exec(f'from ascii2{leco} import ascii2{leco}', globals=globals())
         print(f'Write netcdf {self.outputfile}')
 
         kwargs = {

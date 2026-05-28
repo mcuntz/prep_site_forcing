@@ -78,9 +78,9 @@ def str2int(istr, default):
     else:
         return default
 
-def parse_entry(text):
+def parse_entry(text, default=''):
     """
-    Convert text string to correct data type
+    Convert text string to correct data type if given, otherwise default
 
     Parse an entry field to None, bool, int, float, datetime, list, dict
 
@@ -88,6 +88,8 @@ def parse_entry(text):
     ----------
     text : str
         String from entry field
+    default :
+        Default value to take if empty string
 
     Returns
     -------
@@ -95,14 +97,16 @@ def parse_entry(text):
 
     Examples
     --------
-    >>> parse_entry('7')
+    >>> parse_entry('7', -1)
     7
-    >>> parse_entry('7,3')
+    >>> parse_entry('7,3', [0, 0])
     [7, 3]
 
     """
     if text is None:
         tt = None
+    elif not text:
+        tt = default
     elif ',' in text:
         # # list or str
         # try:
@@ -111,7 +115,7 @@ def parse_entry(text):
         #     tt = text
         # parse each element
         stext = text.split(',')
-        tt = [ parse_entry(ss) for ss in stext ]
+        tt = [ parse_entry(ss, default) for ss in stext ]
     elif text == 'None':
         # None
         tt = None
@@ -443,11 +447,12 @@ class prepSiteForcing(object):
             self.infile = cfg['Input'].get('inputfile', '')
             self.sep = cfg['Input'].get('sep', None)
             self.header = parse_entry(cfg['Input'].get('header', 'infer'))
-            self.index_col = cfg['Input'].get('index_col', None)
-            self.usecols = parse_entry(cfg['Input'].get('usecols', None))
-            self.skiprows = parse_entry(cfg['Input'].get('skiprows', None))
-            self.na_values = parse_entry(cfg['Input'].get('na_values', None))
-            self.parse_dates = parse_entry(cfg['Input'].get('parse_dates', None))
+            self.index_col = parse_entry(cfg['Input'].get('index_col', None), None)
+            self.usecols = parse_entry(cfg['Input'].get('usecols', None), None)
+            self.skiprows = parse_entry(cfg['Input'].get('skiprows', None), None)
+            self.na_values = parse_entry(cfg['Input'].get('na_values', None), None)
+            self.parse_dates = parse_entry(cfg['Input'].get('parse_dates', None),
+                                           None)
             self.date_format = cfg['Input'].get('date_format', 'ISO8601')
             self.ftimestep = str2float(cfg['Input'].get('ftimestep', ''), 1.0)
 
@@ -830,7 +835,10 @@ class prepSiteForcing(object):
 
         navalues = ['NaN', 'NA', 'nan', 'NAN']
         if self.na_values is not None:
-            navalues.extend(self.na_values)
+            if isinstance(self.na_values, Iterable):
+                navalues.extend(self.na_values)
+            else:
+                navalues.append(self.na_values)
         rcargs = {'sep': self.sep,
                   'header': self.header,
                   'index_col': self.index_col,

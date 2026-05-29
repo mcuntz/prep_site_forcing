@@ -849,6 +849,20 @@ class prepSiteForcing(object):
                   'date_format': self.date_format}
         df = pd.read_csv(infile, **rcargs)
 
+        if not np.issubdtype(df.index.dtype, np.datetime64):
+            raise ValueError(
+                f'DataFrame after reading file must have datetime index.'
+                f' Currently it is: {df.index.dtype}.\n'
+                f'You might want to set "index_col" to the column index of'
+                f' the dates in the input file. Current options to'
+                f' pandas.read_csv are:\n'
+                f'{rcargs}'
+                f'which gives the DataFrame:\n'
+                f'{df}')
+
+        in_columns = list(df.columns.copy())
+        wanted_columns = list(self.dnames.values())
+
         # remove units from columns names
         cols = [ hh.split('(')[0].rstrip() if '(' in hh
                  else hh.split('[')[0].rstrip()
@@ -1184,6 +1198,8 @@ class prepSiteForcing(object):
 
         df, dfunit = read_icos(station, product=product, meteo=meteo,
                                units=True, concat=True)
+        in_columns = list(df.columns.copy())
+        wanted_columns = list(self.dnames.values())
         icos_units = dict(zip(list(df.columns), dfunit))
 
         # filter quality flags
@@ -1204,6 +1220,10 @@ class prepSiteForcing(object):
             if self.dnames[dd]:
                 da = df.filter(regex=self.dnames[dd], axis=1)
                 dvars = list(da.columns)
+                if len(dvars) == 0:
+                    raise ValueError(f'No column found for {self.dnames[dd]}.\n'
+                                     f'Available columns are:\n'
+                                     f'{in_columns}')
                 vkeep = dvars[0]
                 dnames[dd] = vkeep
                 ll.append(vkeep)
@@ -1215,6 +1235,12 @@ class prepSiteForcing(object):
                     df = df.drop(columns=vdel)
         df = df[ll]
         self.dnames = dnames
+        if len(df) == 0:
+            raise ValueError(f'No columns left after aggregation of variables.\n'
+                             f'Available columns were:\n'
+                             f'{in_columns}\n'
+                             f'Variables demanded were:\n'
+                             f'{wanted_columns}')
 
         # fill standard vars with alternative vars
         for dd in self.anames:
@@ -1229,6 +1255,12 @@ class prepSiteForcing(object):
         for dd in self.dnames:   # standard and extra vars
             if self.dnames[dd]:
                 ll.append(self.dnames[dd])
+        if len(df) == 0:
+            raise ValueError(f'No columns left after selection of variables.\n'
+                             f'Available columns were:\n'
+                             f'{in_columns}\n'
+                             f'Variables demanded were:\n'
+                             f'{wanted_columns}')
         df = df[ll]
 
         # rename vars to standard names,
@@ -1253,7 +1285,14 @@ class prepSiteForcing(object):
             enddate = df.index[-1]
         else:
             enddate = pd.to_datetime(enddate, format='ISO8601')
+        was_start = df.index[0]
+        was_end = df.index[-1]
         df = df[(df.index >= startdate) & (df.index <= enddate)]
+        if len(df) == 0:
+            raise ValueError(f'No timesteps left after selecting between'
+                             f' startdate {startdate} and enddate {enddate}.\n'
+                             f'Available dates were between {was_start} and'
+                             f' {was_end}.')
 
         self.df = df
 

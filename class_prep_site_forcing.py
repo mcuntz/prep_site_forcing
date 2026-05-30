@@ -2322,7 +2322,7 @@ class prepSiteForcing(object):
 
     def check_vars_filled(self, df=''):
         """
-        Check that no NaN left in vars
+        Check correct units and that no NaN left in vars
 
         Parameters
         ----------
@@ -2339,12 +2339,33 @@ class prepSiteForcing(object):
 
         nn = []
         for vv in df.columns:
-            if vv != 'co2air':
-                if any(df[vv].isna()):
-                    nn.append(vv)
+            if any(df[vv].isna()):
+                nn.append(vv)
 
         if len(nn) > 0:
-            raise ValueError(f'{nn} not completely filled.')
+            warnings.warn(f'Variables {nn} not completely filled.')
+
+        minmax = {'co2air': [200, 1000],
+                  'swdown': [-20, 1400],
+                  'lwdown': [-20, 600],
+                  'psurf': [50000, 150000],
+                  'qair': [1e-4, 0.04],
+                  'tair': [200, 400],
+                  'wind_speed': [0, 100],
+                  'wind_dir': [0, 360],
+                  'precip': [0, 200],
+                  'rainf': [0, 200],
+                  'snowf': [0, 200],
+                  'h_sbl': [0, 2000]}
+        for vv in df.columns:
+            if df[vv].any():
+                imm = minmax[vv]
+                if ((df[vv].min() < imm[0]) or
+                    (df[vv].max() > imm[1])):
+                    warnings.warn(f'\nVariables {vv} out of expected range'
+                                  f' {minmax[vv]}. Current range'
+                                  f' [{df[vv].min()}, {df[vv].max()}].'
+                                  f' Check variable units.')
 
         return
 

@@ -6,6 +6,28 @@ Prepare input data to run ecosystem models.
 |License|
 
 
+Content
+-------
+
+Sections of the README are:
+   * `About`_
+   * `Installation`_
+   * `Config file`_
+     - `Section [Model]`_
+     - `Section [Options]`_
+     - `Section [Site]`_
+     - `Section [ISBA]`_
+     - `Section [MuSICA]`_
+     - `Section [Input]`_
+     - `Section [Output]`_
+     - `Section [ICOS]`_
+     - `Section [ERA5]`_
+     - `Section [CO2]`_
+     - `Section [VarNames]`_
+     - `Section [AlternativeVarNames]`_
+     - `Section [VarUnits]`_
+
+
 About
 -----
 
@@ -46,7 +68,7 @@ ERA5(-Land) data by plotting them into a file:
 
 .. code-block:: bash
 
-   python prep_site_forcing.py -p bias_correction.pdf -t pdf FR-Hes.cfg
+   python prep_site_forcing.py -p bias_correction.pdf FR-Hes.cfg
 
 See ``python prep_site_forcing.py -h`` for help.
 
@@ -221,7 +243,8 @@ from ``inputfile`` using `pandas.read_csv`_. The options ``sep``,
 ``parse_dates``, and ``date_format`` are implemented, which allows to
 read a vast majority of data files. Please see the documentation of
 `pandas.read_csv`_ for details. There are also some example in the
-README_ of dfvue_.
+README_ of dfvue_. All `pandas.read_csv`_ options have the default
+pandas value except ``parse_dates`` that is set to True by default.
 
 ``ftimestep`` indicates which time point is represented by the time
 information in the input file. ``0`` means that the times represent
@@ -573,7 +596,6 @@ the section ``[VarUnits]``. Known units are:
    * ['m/s', 'm s-1', ''] for wind speed
    * ['degree', 'deg', '°', ''] for wind direction
    * ['ppm', 'ppmv', 'µmol/mol', 'µmol mol-1'] for CO2
-   * ['m', ''] for boundary layer height
 
 For example:
 

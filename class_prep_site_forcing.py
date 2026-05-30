@@ -451,8 +451,7 @@ class prepSiteForcing(object):
             self.usecols = parse_entry(cfg['Input'].get('usecols', None), None)
             self.skiprows = parse_entry(cfg['Input'].get('skiprows', None), None)
             self.na_values = parse_entry(cfg['Input'].get('na_values', None), None)
-            self.parse_dates = parse_entry(cfg['Input'].get('parse_dates', None),
-                                           None)
+            self.parse_dates = str2bool(cfg['Input'].get('parse_dates', ''), True)
             self.date_format = cfg['Input'].get('date_format', 'ISO8601')
             self.ftimestep = str2float(cfg['Input'].get('ftimestep', ''), 1.0)
 
@@ -569,7 +568,7 @@ class prepSiteForcing(object):
                     'startdate and enddate must be given if no input file'
                     ' nor ICOS data.')
             if self.imputation_method != 1:
-                warnings.warn('input=ERA5 implies imputation_method=1.'
+                warnings.warn('\ninput=ERA5 implies imputation_method=1.'
                               ' Setting imputation_method=1.')
                 self.imputation_method = 1
 
@@ -578,22 +577,22 @@ class prepSiteForcing(object):
                              f' implemented.')
 
         if (not self.make_netcdf) and (not self.keep_csv):
-            warnings.warn('keep_csv must be True if make_netcdf is False.'
+            warnings.warn('\nkeep_csv must be True if make_netcdf is False.'
                           ' Setting keep_csv=True.')
             self.keep_csv = True
 
         if ((leco == 'musica') and self.rsl_yoyo and
             (self.era5type.lower() not in
              ['era5', 'era5-ts', 'era5-timeseries'])):
-            warnings.warn(f'era5type must be era5 or era5-ts if rsl_yoyo'
+            warnings.warn(f'\nera5type must be era5 or era5-ts if rsl_yoyo'
                           f' for {self.ecomodel}. Taking era5-ts.')
             self.era5type = 'era5-ts'
 
         if ((leco == 'musica') and (self.fill_value is not None)):
-            warnings.warn(f'fill_value should be empty for {self.ecomodel}')
+            warnings.warn(f'\nfill_value should be empty for {self.ecomodel}')
 
         if ((leco == 'isba') and (self.fill_value != -9999999.)):
-            warnings.warn(f'fill_value should be -9999999 for {self.ecomodel}')
+            warnings.warn(f'\nfill_value should be -9999999 for {self.ecomodel}')
 
         return
 
@@ -628,6 +627,12 @@ class prepSiteForcing(object):
         """
         if outtype != '':
             import matplotlib as mpl
+            import matplotlib.pyplot as plt
+
+            figure = plt.Figure()
+            fcb = figure.canvas.get_supported_filetypes()
+            supported_file_types = list(fcb.keys())
+            plt.close(figure)
 
             # dimensions
             self.nrow     = 4     # # of rows of subplots per figure
@@ -663,7 +668,7 @@ class prepSiteForcing(object):
                 # from matplotlib.backends.backend_pdf import PdfPages
                 mpl.rc('ps', papersize='a4', usedistiller='xpdf')
                 mpl.rc('figure', figsize=(8.27, 11.69))  # a4 portrait
-            elif outtype == 'png':
+            elif outtype in supported_file_types:
                 mpl.use('Agg')
                 mpl.rc('figure', figsize=(8.27, 11.69))
                 mpl.rc('savefig', dpi=self.dpi, format='png')
@@ -726,6 +731,11 @@ class prepSiteForcing(object):
         if outtype != '':
             import matplotlib.pyplot as plt
 
+            figure = plt.Figure()
+            fcb = figure.canvas.get_supported_filetypes()
+            supported_file_types = list(fcb.keys())
+            plt.close(figure)
+
             self.setup_plot(outtype)
 
             # set plotting name
@@ -785,11 +795,11 @@ class prepSiteForcing(object):
                         sub.text(0.02, 0.8, st, fontsize='small',
                                  transform=sub.transAxes)
 
-            if (outtype == 'pdf'):
+            if outtype == 'pdf':
                 pdf_pages.savefig(fig)
                 plt.close(fig)
                 pdf_pages.close()
-            elif (outtype == 'png'):
+            elif outtype in supported_file_types:
                 fig.savefig(plotname, transparent=self.transparent,
                             bbox_inches=self.bbox_inches,
                             pad_inches=self.pad_inches)
@@ -859,6 +869,15 @@ class prepSiteForcing(object):
                 f'{rcargs}'
                 f'which gives the DataFrame:\n'
                 f'{df}')
+        try:
+            _ = [ float(cc) for cc in df.columns ]
+            warnings.warn(f'\nAll column names are numbers in input file:\n'
+                          f'{list(df.columns)}.\n'
+                          f'You might have set "header" or "skiprows" to wrong'
+                          f' numbers. Currently they are: header {self.header},'
+                          f' skiprows {self.skiprows}.')
+        except ValueError:
+            pass
 
         in_columns = list(df.columns.copy())
         wanted_columns = list(self.dnames.values())
@@ -877,6 +896,10 @@ class prepSiteForcing(object):
             if self.dnames[dd]:
                 da = df.filter(regex=self.dnames[dd], axis=1)
                 dvars = list(da.columns)
+                if len(dvars) == 0:
+                    raise ValueError(f'No column found for {self.dnames[dd]}.\n'
+                                     f'Available columns are:\n'
+                                     f'{in_columns}')
                 vkeep = dvars[0]
                 dnames[dd] = vkeep
                 ll.append(vkeep)
@@ -886,6 +909,12 @@ class prepSiteForcing(object):
                     df[vkeep] = da
                     vdel = dvars[1:]
                     df = df.drop(columns=vdel)
+        if len(ll) == 0:
+            raise ValueError(f'No columns left after aggregation of variables.\n'
+                             f'Available columns were:\n'
+                             f'{in_columns}\n'
+                             f'Variables demanded were:\n'
+                             f'{wanted_columns}')
         df = df[ll]
         self.dnames = dnames
 
@@ -902,6 +931,12 @@ class prepSiteForcing(object):
         for dd in self.dnames:   # standard and extra vars
             if self.dnames[dd]:
                 ll.append(self.dnames[dd])
+        if len(ll) == 0:
+            raise ValueError(f'No columns left after selection of variables.\n'
+                             f'Available columns were:\n'
+                             f'{in_columns}\n'
+                             f'Variables demanded were:\n'
+                             f'{wanted_columns}')
         df = df[ll]
 
         # rename vars to standard names,
@@ -921,7 +956,14 @@ class prepSiteForcing(object):
             enddate = df.index[-1]
         else:
             enddate = pd.to_datetime(enddate, format='ISO8601')
+        was_start = df.index[0]
+        was_end = df.index[-1]
         df = df[(df.index >= startdate) & (df.index <= enddate)]
+        if len(df) == 0:
+            raise ValueError(f'No timesteps left after selecting between'
+                             f' startdate {startdate} and enddate {enddate}.\n'
+                             f'Available dates were between {was_start} and'
+                             f' {was_end}.')
 
         self.df = df
 
@@ -1233,14 +1275,14 @@ class prepSiteForcing(object):
                     df[vkeep] = da
                     vdel = dvars[1:]
                     df = df.drop(columns=vdel)
-        df = df[ll]
-        self.dnames = dnames
-        if len(df) == 0:
+        if len(ll) == 0:
             raise ValueError(f'No columns left after aggregation of variables.\n'
                              f'Available columns were:\n'
                              f'{in_columns}\n'
                              f'Variables demanded were:\n'
                              f'{wanted_columns}')
+        df = df[ll]
+        self.dnames = dnames
 
         # fill standard vars with alternative vars
         for dd in self.anames:
@@ -1255,7 +1297,7 @@ class prepSiteForcing(object):
         for dd in self.dnames:   # standard and extra vars
             if self.dnames[dd]:
                 ll.append(self.dnames[dd])
-        if len(df) == 0:
+        if len(ll) == 0:
             raise ValueError(f'No columns left after selection of variables.\n'
                              f'Available columns were:\n'
                              f'{in_columns}\n'
@@ -1956,7 +1998,7 @@ class prepSiteForcing(object):
         if imputation_method == 0:
             ii = df.notna()
             if ii.sum() == 0:
-                warnings.warn(f'No valid data point in {df.name}')
+                warnings.warn(f'\nNo valid data point in {df.name}')
                 return df, pdict
             ivar = np.interp(df.index,
                              df.index[ii],
@@ -2230,9 +2272,8 @@ class prepSiteForcing(object):
 
         # all NaN
         if all(idf['co2air'].isna()):
-            wstr = ('No CO2 concentration given. Fill in csv'
-                    ' manually and run ascii2netcdf again.')
-            warnings.warn(wstr)
+            warnings.warn('\nNo CO2 concentration given. Fill in csv'
+                          ' manually and run ascii2netcdf again.')
 
         if not isinstance(df, str):
             return idf

@@ -11,6 +11,8 @@ History
 
 '''
 import argparse
+import warnings
+import matplotlib.pyplot as plt
 from class_prep_site_forcing import prepSiteForcing
 
 
@@ -59,6 +61,19 @@ if __name__ == '__main__':
     if configfile is None:
         raise IOError('Configuration file must be given.')
     cfgfile = configfile
+
+    # Determine outtype from plotname
+    if (plotname != '') and (outtype == ''):
+        outtype = plotname[plotname.rfind(".") + 1:]
+        figure = plt.Figure()
+        fcb = figure.canvas.get_supported_filetypes()
+        supported_file_types = list(fcb.keys())
+        plt.close(figure)
+        if outtype not in supported_file_types:
+            warnings.warn(f'\nplot outtype {outtype} not in supported file types:\n'
+                          f'{supported_file_types}')
+            plotname = ''
+            outtype = 'X'
 
     import time as ptime
     t1 = ptime.time()

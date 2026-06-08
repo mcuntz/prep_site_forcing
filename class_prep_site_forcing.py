@@ -2266,8 +2266,8 @@ class prepSiteForcing(object):
                 date = dfc.iloc[:, self.co2date_column].values
                 year = (date // 1).astype(int)
                 leap  = ((((year % 4) == 0) & ((year % 100) != 0)) |
-                         ((year % 400) == 0)).astype(int)
-                doy = ((date % 1.) * (365 + leap) + 1).astype(int).astype(str)
+                         ((year % 400) == 0)).astype(float)
+                doy = ((date % 1.) * (365. + leap) + 1.).astype(int).astype(str)
                 year = year.astype(str)
                 aco2.index = pd.to_datetime(year + '.' + doy, format='%Y.%j')
                 ivar = np.interp(co2.index, aco2.index, aco2)

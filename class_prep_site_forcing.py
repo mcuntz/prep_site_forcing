@@ -2264,8 +2264,11 @@ class prepSiteForcing(object):
                 dfc = pd.read_csv(co2file, **rcargs)
                 aco2 = dfc.iloc[:, self.co2co2_column]
                 date = dfc.iloc[:, self.co2date_column].values
-                year = (date // 1).astype(int).astype(str)
-                doy = ((date % 1.) * 365.25).astype(int).astype(str)
+                year = (date // 1).astype(int)
+                leap  = ((((year % 4) == 0) & ((year % 100) != 0)) |
+                         ((year % 400) == 0)).astype(int)
+                doy = ((date % 1.) * (365 + leap) + 1).astype(int).astype(str)
+                year = year.astype(str)
                 aco2.index = pd.to_datetime(year + '.' + doy, format='%Y.%j')
                 ivar = np.interp(co2.index, aco2.index, aco2)
             idf['co2air'] = co2.where(co2.notna(), other=ivar)

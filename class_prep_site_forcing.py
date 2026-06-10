@@ -299,10 +299,17 @@ class prepSiteForcing(object):
         self.era5path = '.'
         self.era5type = 'era5-land-ts'
         # CO2
-        self.co2file = ''
-        self.co2delimiter = ','
-        self.co2date_column = 0
-        self.co2co2_column = 1
+        self.co2_file = ''
+        self.co2_sep = None
+        self.co2_header = 'infer'
+        self.co2_index_col = None
+        self.co2_usecols = None
+        self.co2_skiprows = None
+        self.co2_na_values = None
+        self.co2_parse_dates = None
+        self.co2_date_format = 'ISO8601'
+        self.co2_ftimestep = 0.5
+        self.co2_name = ''
         # VarNames
         self.dnames = {}
         # VarUnits
@@ -326,7 +333,7 @@ class prepSiteForcing(object):
 
         Returns
         -------
-        Sets attributes: 
+        Sets attributes:
             varnames, varunits,
             pnames, punits,
             dvarunits
@@ -486,10 +493,24 @@ class prepSiteForcing(object):
 
         # CO2
         if cfg.has_section('CO2'):
-            self.co2file = cfg['CO2'].get('co2file', '')
-            self.co2delimiter = cfg['CO2'].get('co2delimiter', ',')
-            self.co2date_column = str2int(cfg['CO2'].get('co2date_column', ''), 0)
-            self.co2co2_column = str2int(cfg['CO2'].get('co2co2_column', ''), 1)
+            self.co2_file = cfg['CO2'].get('co2_file', '')
+            self.co2_sep = cfg['CO2'].get('co2_sep', None)
+            self.co2_header = parse_entry(cfg['CO2'].get(
+                'co2_header', 'infer'))
+            self.co2_index_col = parse_entry(cfg['CO2'].get(
+                'co2_index_col', None), None)
+            self.co2_usecols = parse_entry(cfg['CO2'].get(
+                'co2_usecols', None), None)
+            self.co2_skiprows = parse_entry(cfg['CO2'].get(
+                'co2_skiprows', None), None)
+            self.co2_na_values = parse_entry(cfg['CO2'].get(
+                'co2_na_values', None), None)
+            self.co2_parse_dates = str2bool(cfg['CO2'].get(
+                'co2_parse_dates', ''), True)
+            self.co2_date_format = cfg['CO2'].get('co2_date_format', 'ISO8601')
+            self.co2_ftimestep = str2float(cfg['CO2'].get(
+                'co2_ftimestep', ''), 1.0)
+            self.co2_name = cfg['CO2'].get('co2_name', '')
 
         # VarNames
         ss = 'VarNames'
@@ -706,7 +727,7 @@ class prepSiteForcing(object):
 
         return
 
-    
+
     def plot_filled(self, ds, plotdict, outtype='', plotname=''):
         """
         Setup output plots
@@ -754,8 +775,8 @@ class prepSiteForcing(object):
             if vlat == 'latitude':
                 emod = 'ERA5'
             else:
-                emod = 'ERA5-Land'                
-            tit = f'Obs vs. {emod}'                
+                emod = 'ERA5-Land'
+            tit = f'Obs vs. {emod}'
             fig.text(0.5, 0.95, tit,
                      horizontalalignment='center',
                      fontweight='bold', fontsize='large')
@@ -947,7 +968,7 @@ class prepSiteForcing(object):
             else:
                 df[dd] = np.nan
 
-        # start and end dates        
+        # start and end dates
         if startdate == '':
             startdate = df.index[0]
         else:
@@ -1143,7 +1164,7 @@ class prepSiteForcing(object):
             Last date in output netcdf file in ISO8601 format.
             (Default: enddate from config file)
         timestep : str, optional
-            Timestep of output dates. 
+            Timestep of output dates.
             (Default: timestep from config file otherwise 3600s)
 
             Notation from:
@@ -1178,7 +1199,7 @@ class prepSiteForcing(object):
 
         self.dnames = dict(zip(columns, columns))
         self.dunits = self.dvarunits.copy()
-        
+
         df = pd.DataFrame(index=dates, columns=columns)
 
         self.df = df
@@ -1198,15 +1219,15 @@ class prepSiteForcing(object):
         product : str, optional
             ICOS-CP data product (default: self.icos_product)
               'NRT' : near-real-time data
-        
+
               'L2' : ICOS L2 data
-        
+
               'Fluxnet' : europe-fluxdata.eu data
         meteo : str, optional
             NRT : 'Meteo', 'Meteosens'
 
             L2 : 'Meteo', 'Meteosens', 'Fluxnet'
-        
+
             Fluxnet : ignored
 
             (default: self.icos_meteo)
@@ -1318,7 +1339,7 @@ class prepSiteForcing(object):
             if self.dnames[dd]:
                 self.dunits.update({dd: icos_units[self.dnames[dd]]})
 
-        # start and end dates        
+        # start and end dates
         if startdate == '':
             startdate = df.index[0]
         else:
@@ -1749,7 +1770,7 @@ class prepSiteForcing(object):
 
         if isinstance(ds, str) and isinstance(ids, xr.DataArray):
             ids.close()
-        
+
         if smax > 5e6:
             return True
         else:
@@ -1870,7 +1891,7 @@ class prepSiteForcing(object):
                 ds = dsvar.resample(time='1D').mean()
                 ds = ds.loc[(ds['time'] >= df.index[0]) &
                             (ds['time'] <= df.index[-1])]
-            
+
             if any(df.notna()):
                 ivar = df[df.notna()].values
                 if isinstance(dsvar, (pd.DataFrame, pd.Series)):
@@ -2225,7 +2246,7 @@ class prepSiteForcing(object):
         return df
 
 
-    def fill_co2(self, df='', co2file=''):
+    def fill_co2(self, df='', co2_file=''):
         """
         Fill missing CO2air
 
@@ -2233,8 +2254,8 @@ class prepSiteForcing(object):
         ----------
         df : pandas.DataFrame, optional
             DataFrame with input data (default: self.df)
-        co2file : str, optional
-            Filename with CO2 concentrations (default: self.co2file)
+        co2_file : str, optional
+            Filename with CO2 concentrations (default: self.co2_file)
             If (not co2file) and (not self.co2file), gaps will be
             filled with the mean value of the time series.
 
@@ -2248,32 +2269,38 @@ class prepSiteForcing(object):
             idf = df
         else:
             idf = self.df.copy()
-        if co2file == '':
-            co2file = self.co2file
+
+        if co2_file == '':
+            co2_file = self.co2_file
 
         print('Fill CO2')
 
         co2 = idf['co2air']
         if any(co2.isna()):
-            if co2file == '':
+            if co2_file == '':
                 ivar = co2.mean()
                 print(f'    mean value {ivar}')
             else:
-                print(f'    using {co2file}')
-                rcargs = {'sep': self.co2delimiter,
-                          'header': 0,
-                          'parse_dates': False,
-                          'skipinitialspace': True}
-                dfc = pd.read_csv(co2file, **rcargs)
-                aco2 = dfc.iloc[:, self.co2co2_column]
-                date = dfc.iloc[:, self.co2date_column].values
-                year = (date // 1).astype(int)
-                leap  = ((((year % 4) == 0) & ((year % 100) != 0)) |
-                         ((year % 400) == 0)).astype(float)
-                doy = ((date % 1.) * (365. + leap) + 1.).astype(int).astype(str)
-                year = year.astype(str)
-                aco2.index = pd.to_datetime(year + '.' + doy, format='%Y.%j')
-                ivar = np.interp(co2.index, aco2.index, aco2)
+                print(f'    using {co2_file}')
+
+                co2_navalues = ['NaN', 'NA', 'nan', 'NAN']
+                if self.co2_na_values is not None:
+                    if isinstance(self.co2_na_values, Iterable):
+                        co2_navalues.extend(self.co2_na_values)
+                    else:
+                        co2_navalues.append(self.co2_na_values)
+                rcargs = {'sep': self.co2_sep,
+                          'header': self.co2_header,
+                          'index_col': self.co2_index_col,
+                          'usecols': self.co2_usecols,
+                          'skiprows': self.co2_skiprows,
+                          'na_values': self.co2_na_values,
+                          'parse_dates': self.co2_parse_dates,
+                          'date_format': self.co2_date_format}
+                df = pd.read_csv(co2_file, **rcargs)
+                ico2 = df[self.co2_name]
+
+                ivar = np.interp(co2.index, ico2.index, ico2)
             if all(co2.isna()):
                 idf['co2air'] = ivar
             else:
@@ -2425,7 +2452,7 @@ class prepSiteForcing(object):
 
         # sort datetime columns first
         idf = idf[columns]
-        
+
         # include units in column names
         ocol = {}
         for cc in idf.columns:

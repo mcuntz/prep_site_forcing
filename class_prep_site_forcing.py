@@ -2212,12 +2212,15 @@ class prepSiteForcing(object):
             else:
                 plotdict.update({pkey: None})
 
-        if self.imputation_method == 1:
+        if (self.imputation_method == 1) and (self.input.lower() != 'era5'):
             self.plot_filled(ds, plotdict,
                              outtype=outtype, plotname=plotname)
 
             if isinstance(ds, xr.DataArray):
                 ds.close()
+        elif (self.imputation_method == 1) and (self.input.lower() == 'era5'):
+            warnings.warn('\nNo bias correction with ERA5 if input is'
+                          ' already ERA5.')
 
         return df
 
@@ -2271,7 +2274,10 @@ class prepSiteForcing(object):
                 year = year.astype(str)
                 aco2.index = pd.to_datetime(year + '.' + doy, format='%Y.%j')
                 ivar = np.interp(co2.index, aco2.index, aco2)
-            idf['co2air'] = co2.where(co2.notna(), other=ivar)
+            if all(co2.isna()):
+                idf['co2air'] = ivar
+            else:
+                idf['co2air'] = co2.where(co2.notna(), other=ivar)
 
         # all NaN
         if all(idf['co2air'].isna()):
@@ -2306,7 +2312,7 @@ class prepSiteForcing(object):
             idf = self.df.copy()
 
         wdir = idf['wind_dir']
-        if any(wdir.isna()):
+        if any(wdir.isna()) and (not all(wdir.isna())):
             idf['wind_dir'] = wdir.where(wdir.notna(), other=wdir.median())
 
         # all NaN

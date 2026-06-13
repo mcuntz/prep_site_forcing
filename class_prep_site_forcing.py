@@ -2300,7 +2300,8 @@ class prepSiteForcing(object):
                 df = pd.read_csv(co2_file, **rcargs)
                 ico2 = df[self.co2_name]
 
-                ivar = np.interp(co2.index, ico2.index, ico2)
+                ivar = np.interp(co2.index.astype(ico2.index.dtype),
+                                 ico2.index, ico2)
             if all(co2.isna()):
                 idf['co2air'] = ivar
             else:

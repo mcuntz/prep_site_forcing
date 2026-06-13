@@ -16,13 +16,14 @@ History
    * Print variable names (info_icos), Matthias Cuntz, Apr 2026
    * Return Dobj if station and full product name (info_icos),
      Matthias Cuntz, Apr 2026
+   * Remove Dobj from icoscp, Matthias Cuntz, Jun 2026
+   * Add command line interface, Matthias Cuntz, Jun 2026
 
 '''
 import os
 import numpy as np
 import pandas as pd
 from icoscp_core.icos import meta, data, ECO_STATION
-from icoscp.dobj import Dobj
 # To initialize, run the following code interactively once for every machine
 # from icoscp_core.icos import auth
 # auth.init_config_file()
@@ -96,7 +97,7 @@ def info_icos(station='', product=''):
 
     Returns
     -------
-    icoscp.dobj.Dobj
+    icoscp_core.metaclient.DataObject
         if station and full product name, otherwise None
     Prints info on ICOS ecosystem stations
 
@@ -117,7 +118,8 @@ def info_icos(station='', product=''):
 
     if station not in eco_stations_ids:
         raise ValueError(f'Station {station} not known.'
-                         f' Known ecosystem stations: {eco_stations_ids}')
+                         f' Known ecosystem stations:\n'
+                         f'{eco_stations_ids}')
 
     istation = [ ee for ee in eco_stations if ee.id == station ][0]
     i_have_product = []
@@ -138,7 +140,8 @@ def info_icos(station='', product=''):
         print('Available full product names:')
         print('   ', ', '.join(products_avail))
 
-        products = [ pp.split()[1] if pp.split()[0] == 'ETC' else pp.split()[0]
+        products = [ pp.split()[1]
+                     if pp.split()[0] == 'ETC' else pp.split()[0]
                      for pp in products_avail ]
         products = sorted(set(products))
         print('')
@@ -148,17 +151,19 @@ def info_icos(station='', product=''):
         if product.lower() in lproducts_avail:
             pp = products_avail[lproducts_avail.index(product.lower())]
             dtype = [ dd for dd in meta.list_datatypes() if dd.label == pp ][0]
-            srelease = meta.list_data_objects(dtype, station=istation)
-            dobj = Dobj(srelease[0].uri)
+            srelease = meta.list_data_objects(dtype, station=istation)[0]
 
-            # pvars = dobj.colNames  # only preview-able variables
-            pvars = dobj.variables.name.values
+            dobj_meta = meta.get_dobj_meta(srelease.uri)
+            sdata = data.get_columns_as_arrays(dobj_meta, length=1)
+            idf = pd.DataFrame(sdata)
+
+            pvars = list(idf.columns)
             pvars.sort()
             print('')
             print(f'Available variables for product "{pp}":')
-            print('   ', ', '.join(pvars))
+            print(', '.join(pvars))
 
-            return dobj
+            return dobj_meta
         else:
             ipa = []
             for pp in products_avail:
@@ -233,7 +238,8 @@ def read_icos(station, product='NRT', meteo='Meteosens',
     eco_stations_ids = [ ss.id for ss in eco_stations ]
     if station not in eco_stations_ids:
         raise ValueError(f'Station {station} not known.'
-                         f' Known ecosystem stations: {eco_stations_ids}')
+                         f' Known ecosystem stations:\n'
+                         f'{eco_stations_ids}')
 
     isstation = [ ss for ss in eco_stations if ss.id == station ]
     isstation = isstation[0]
@@ -284,19 +290,20 @@ def read_icos(station, product='NRT', meteo='Meteosens',
         dtype = [ dd for dd in meta.list_datatypes() if dd.label == pp ]
         dtype = dtype[0]
 
-        srelease = meta.list_data_objects(dtype, station=isstation)
-        sdata = data.batch_get_columns_as_arrays(srelease)
+        srelease = meta.list_data_objects(dtype, station=isstation)[0]
+        dobj_meta = meta.get_dobj_meta(srelease.uri)
+        sdata = data.get_columns_as_arrays(dobj_meta)
 
-        idf = [ arrs for dobj, arrs in sdata ]
-        idf = idf[0]
         # _QC column is '-' if data column is NaN,
         # e.g. in product Fluxnet -> set to NaN so that dtype float
         # in pandas.DataFrame
-        for dd in idf:
-            ids = idf[dd]
+        for dd in sdata:
+            ids = sdata[dd]
             if isinstance(ids[0], str):
-                idf[dd] = np.where(ids == '-', 'NaN', ids).astype(np.float32)
-        idf = pd.DataFrame(idf)
+                sdata[dd] = np.where(
+                    ids == '-', 'NaN', ids).astype(np.float32)
+
+        idf = pd.DataFrame(sdata)
 
         idf.set_index('TIMESTAMP', inplace=True)
         if 'TIMESTAMP_END' in idf.columns:
@@ -306,11 +313,18 @@ def read_icos(station, product='NRT', meteo='Meteosens',
         df.append(idf)
 
         if units:
-            dobj = Dobj(srelease[0].uri)
+            # units of all variables
+            si = dobj_meta.specificInfo
+            vunits = {}
+            for vv in si.columns:
+                vt = vv.valueType
+                if hasattr(vt, 'unit'):
+                    vunits.update({vv.label: vt.unit})
+            # units of selected variables (should be the same) 
             iunit = []
             for cc in idf.columns:
-                iunit.append(dobj.variables[
-                    dobj.variables.name == cc].unit.values[0])
+                iunit.append(vunits[cc])
+            # units of all products
             unit.append(iunit)
 
     if concat:
@@ -386,3 +400,111 @@ def write_icos(station, outfile,
     df.to_csv(outfile, na_rep=undef, index_label='TIMESTAMP_END')
 
     return
+
+
+if __name__ == '__main__':
+
+    import argparse
+    import os
+    import sys
+
+    info = False
+    output = ''
+    product = ''
+    station = ''
+
+    desc = "Info and retrieval of ICOS ecosystem data."
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=desc)
+
+    hstr = ('If True, print info about ICOS stations, products,'
+            ' and variables. Otherwise download product at station.'
+            ' If product is L2 or NRT Meteo or Meteosens then the'
+            ' the corresponding fluxes will be added.')
+    parser.add_argument('-i', '--info', action='store_true',
+                        default=info, dest='info',
+                        help=hstr)
+
+    hstr = ('Output filename. If not given, filename will be'
+            ' {station}_{product.replace(" ", "_")}.csv')
+    parser.add_argument('-o', '--output', action='store',
+                        default=output, dest='output',
+                        metavar='output_filename', help=hstr)
+
+    hstr = ('Short (e.g. L2) or full (e.g L2 Meteosens) product name'
+            ' (case insensitive); full product names must be in quotes.'
+            ' Print available meteo for product if short product name'
+            ' or full product name and info (-i).'
+            ' Download product at station if full product name or print'
+            ' available variable names if info (-i).'
+            ' If the product L2 or NRT Meteo or Meteosens will be downloaded,'
+            ' then the the corresponding fluxes will be added. (default: "")')
+    parser.add_argument('-p', '--product', action='store',
+                        default=product, dest='product',
+                        metavar='short_or_full_product', help=hstr)
+
+    hstr = ('ICOS station ID such as FR-Hes (case-sensitive).'
+            ' Prints available products and meteo for station (-i)'
+            ' or downloads product at station.'
+            ' If empty, prints available ICOS stations and products.'
+            ' (default: "").')
+    parser.add_argument('station', nargs='?', default=station,
+                        metavar='ICOS_ID', help=hstr)
+
+    args = parser.parse_args()
+
+    info = args.info
+    output = args.output
+    product = args.product
+    station = args.station
+
+    # info, or station or product missing
+    if info or (station == '') or (product == ''):
+        if (product.lower().startswith('l2') or
+            product.lower().startswith('nrt')):
+            eproduct = f'ETC {product}'
+        else:
+            eproduct = product
+        info_icos(station=station, product=eproduct)
+    else:
+        eco_stations = meta.list_stations(ECO_STATION)
+        eco_stations_ids = [ ss.id for ss in eco_stations ]
+
+        # valid station
+        if station not in eco_stations_ids:
+            print(f'Station {station} not known.'
+                  f' Known ecosystem stations:\n'
+                  f'{eco_stations_ids}')
+        else:
+            # full product
+            istation = [ ee for ee in eco_stations if ee.id == station ][0]
+            i_have_product = []
+            for pp in known_products:
+                dtype = [ dd for dd in meta.list_datatypes() if dd.label == pp ][0]
+                # meta.list_data_objects is empty is dtype does not exist
+                i_have_product.append(len(
+                    meta.list_data_objects(dtype, station=istation)))
+            products_avail = [ known_products[i] for i in range(len(known_products))
+                               if i_have_product[i] != 0 ]
+            products_avail = sorted(set(products_avail))
+            lproducts_avail = [ pp.lower() for pp in products_avail ]
+
+            if (product.lower().startswith('l2') or
+                product.lower().startswith('nrt')):
+                lproduct = f'etc {product.lower()}'
+            else:
+                lproduct = product.lower()
+
+            if lproduct in lproducts_avail:
+                if info:
+                    info_icos(station=station, product=lproduct)
+                else:
+                    if output == '':
+                        output = f'{station}_{product.replace(" ", "_")}.csv'
+                    p, m = product.split(' ')
+                    print(f'Write {output} for product {p} {m} at {station}')
+                    write_icos(station, output, product=p, meteo=m,
+                               undef=-9999., verbose=False)
+            else:
+                info_icos(station=station, product='')

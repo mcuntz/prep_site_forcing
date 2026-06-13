@@ -593,6 +593,9 @@ class prepSiteForcing(object):
                               ' Setting imputation_method=1.')
                 self.imputation_method = 1
 
+        if self.input.lower() == 'icos':
+            self.ftimestep = 1.0
+
         if self.imputation_method > 1:
             raise ValueError(f'imputation_method = {self.imputation_method} not'
                              f' implemented.')
@@ -977,14 +980,47 @@ class prepSiteForcing(object):
             enddate = df.index[-1]
         else:
             enddate = pd.to_datetime(enddate, format='ISO8601')
+
+        dt = self.get_timestep_seconds(df=df)
         was_start = df.index[0]
         was_end = df.index[-1]
         df = df[(df.index >= startdate) & (df.index <= enddate)]
         if len(df) == 0:
-            raise ValueError(f'No timesteps left after selecting between'
-                             f' startdate {startdate} and enddate {enddate}.\n'
-                             f'Available dates were between {was_start} and'
-                             f' {was_end}.')
+            warnings.warn(f'\nNo timesteps left from input file {infile}'
+                          f' after selecting between startdate {startdate}'
+                          f' and enddate {enddate}. Available dates were'
+                          f' between {was_start} and {was_end}.')
+            df = self.make_empty_data(startdate=startdate,
+                                      enddate=enddate,
+                                      timestep=f'{dt}s')
+        else:
+            dtt = np.timedelta64(dt, 's')
+            if ((startdate < (df.index[0] - dtt)) or
+                (enddate > (df.index[-1] + dtt))):
+                if startdate < (df.index[0] - dtt):
+                    if (((df.index[0] - startdate) / dtt) % 1.) != 0.:
+                        warnings.warn(
+                            f'\nStartdate {startdate} does not fit to dates'
+                            f' in DataFrame: {df.index[0]}, {df.index[1]},'
+                            f' ...\nDo not extend DataFrame.')
+                    else:
+                        df1 = pd.DataFrame([[np.nan] * df.shape[1]],
+                                           index=[startdate],
+                                           columns=df.columns)
+                        df = pd.concat([df1, df])
+                if enddate > (df.index[-1] + dtt):
+                    if (((enddate - df.index[-1]) / dtt) % 1.) != 0.:
+                        warnings.warn(
+                            f'\nEnddate {enddate} does not fit to dates'
+                            f' in DataFrame: ..., {df.index[-2]},'
+                            f' {df.index[-1]}\nDo not extend DataFrame.')
+                    else:
+                        df1 = pd.DataFrame([[np.nan] * df.shape[1]],
+                                           index=[enddate],
+                                           columns=df.columns)
+                        df = pd.concat([df, df1])
+
+                df = df.resample(f'{dt}s', origin='start').asfreq(np.nan)
 
         self.df = df
 
@@ -1348,14 +1384,48 @@ class prepSiteForcing(object):
             enddate = df.index[-1]
         else:
             enddate = pd.to_datetime(enddate, format='ISO8601')
+
+        dt = self.get_timestep_seconds(df=df)
         was_start = df.index[0]
         was_end = df.index[-1]
         df = df[(df.index >= startdate) & (df.index <= enddate)]
+
         if len(df) == 0:
-            raise ValueError(f'No timesteps left after selecting between'
-                             f' startdate {startdate} and enddate {enddate}.\n'
-                             f'Available dates were between {was_start} and'
-                             f' {was_end}.')
+            warnings.warn(f'\nNo timesteps left from ICOS data'
+                          f' after selecting between startdate {startdate}'
+                          f' and enddate {enddate}. Available dates were'
+                          f' between {was_start} and {was_end}.')
+            df = self.make_empty_data(startdate=startdate,
+                                      enddate=enddate,
+                                      timestep=f'{dt}s')
+        else:
+            dtt = np.timedelta64(dt, 's')
+            if ((startdate < (df.index[0] - dtt)) or
+                (enddate > (df.index[-1] + dtt))):
+                if startdate < (df.index[0] - dtt):
+                    if (((df.index[0] - startdate) / dtt) % 1.) != 0.:
+                        warnings.warn(
+                            f'\nStartdate {startdate} does not fit to dates'
+                            f' in DataFrame: {df.index[0]}, {df.index[1]},'
+                            f' ...\nDo not extend DataFrame.')
+                    else:
+                        df1 = pd.DataFrame([[np.nan] * df.shape[1]],
+                                           index=[startdate],
+                                           columns=df.columns)
+                        df = pd.concat([df1, df])
+                if enddate > (df.index[-1] + dtt):
+                    if (((enddate - df.index[-1]) / dtt) % 1.) != 0.:
+                        warnings.warn(
+                            f'\nEnddate {enddate} does not fit to dates'
+                            f' in DataFrame: ..., {df.index[-2]},'
+                            f' {df.index[-1]}\nDo not extend DataFrame.')
+                    else:
+                        df1 = pd.DataFrame([[np.nan] * df.shape[1]],
+                                           index=[enddate],
+                                           columns=df.columns)
+                        df = pd.concat([df, df1])
+
+                df = df.resample(f'{dt}s', origin='start').asfreq(np.nan)
 
         self.df = df
 
@@ -1929,10 +1999,10 @@ class prepSiteForcing(object):
                 # last day missing thus use interp to fill
                 xp = iout['time'].values.astype('int64') / 1e9
                 fp = iout.values.squeeze()
-            iout = np.interp(x, xp, fp)
+            iout = np.interp(x.astype(xp.dtype), xp, fp)
         else:
             # same time step as ERA5
-            # will also put index at beginning of the hour
+            # will also put index at beginning of the day
             df = dfvar.resample('1h').mean()
             if isinstance(dsvar, (pd.DataFrame, pd.Series)):
                 ds = dsvar.loc[(dsvar.index >= df.index[0]) &
@@ -1977,7 +2047,7 @@ class prepSiteForcing(object):
                     xp = dsvar['time'].values + np.timedelta64(30, 'm')
             xp = xp.astype('int64') / 1e9
             fp = out.values.squeeze()
-            iout = np.interp(x, xp, fp)
+            iout = np.interp(x.astype(xp.dtype), xp, fp)
         pdict.update({'interpol_era': dfvar, 'interpol_obs': iout})
 
         return iout, pdict
@@ -2075,6 +2145,8 @@ class prepSiteForcing(object):
             ds = self.open_era5_files(era5files)
             era5dt = self.get_era5_timestep_seconds(ds)
             iforecast = self.check_forecast(ds)
+            # set np.datetime64 to same precision
+            df.index = df.index.astype(ds.index.dtype)
 
         print('Fill')
         plotdict = dict()

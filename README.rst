@@ -13,19 +13,20 @@ Sections of the README are:
    * `About`_
    * `Installation`_
    * `Config file`_
-   * `Section [Model]`_
-   * `Section [Options]`_
-   * `Section [Site]`_
-   * `Section [ISBA]`_
-   * `Section [MuSICA]`_
-   * `Section [Input]`_
-   * `Section [Output]`_
-   * `Section [ICOS]`_
-   * `Section [ERA5]`_
-   * `Section [CO2]`_
-   * `Section [VarNames]`_
-   * `Section [AlternativeVarNames]`_
-   * `Section [VarUnits]`_
+
+     - `Section [Model]`_
+     - `Section [Options]`_
+     - `Section [Site]`_
+     - `Section [ISBA]`_
+     - `Section [MuSICA]`_
+     - `Section [Input]`_
+     - `Section [Output]`_
+     - `Section [ICOS]`_
+     - `Section [ERA5]`_
+     - `Section [CO2]`_
+     - `Section [VarNames]`_
+     - `Section [AlternativeVarNames]`_
+     - `Section [VarUnits]`_
 
 
 About

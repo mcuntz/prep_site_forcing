@@ -293,11 +293,10 @@ class prepSiteForcing(object):
         self.timestep = ''
         # ICOS
         self.icos_product = ''
-        self.icos_meteo = ''
         self.icos_qc = 2
         # ERA5
-        self.era5path = '.'
         self.era5type = 'era5-land-ts'
+        self.era5path = '.'
         # CO2
         self.co2_file = ''
         self.co2_sep = None
@@ -482,14 +481,12 @@ class prepSiteForcing(object):
         # ICOS
         if cfg.has_section('ICOS'):
             self.icos_product = cfg['ICOS'].get('icos_product', '')
-            self.icos_meteo = cfg['ICOS'].get('icos_meteo', '')
             self.icos_qc = str2int(cfg['ICOS'].get('icos_qc', ''), 2)
 
         # ERA5
         if cfg.has_section('ERA5'):
-            self.era5path = cfg['ERA5'].get('era', '.')
-            self.era5path = cfg['ERA5'].get('era5path', self.era5path)
             self.era5type = cfg['ERA5'].get('era5type', 'era5-land-ts')
+            self.era5path = cfg['ERA5'].get('era5path', '.')
 
         # CO2
         if cfg.has_section('CO2'):
@@ -1243,7 +1240,7 @@ class prepSiteForcing(object):
         return df
 
 
-    def read_icos_data(self, station='', product='', meteo='',
+    def read_icos_data(self, station='', product='',
                        startdate=None, enddate=None):
         """
         Read data, get datetime, select columns, select time_span
@@ -1254,19 +1251,24 @@ class prepSiteForcing(object):
             ICOS Station name (default: self.site_name)
         product : str, optional
             ICOS-CP data product (default: self.icos_product)
-              'NRT' : near-real-time data
+                'ETC L2 Fluxes' : L2 ecosystem fluxes
+                'ETC L2 Fluxnet (half-hourly)' : Fluxnet product for ICOS L2 data
+                'ETC L2 Meteo' : L2 aggregated meteorological variables
+                'ETC L2 Meteosens' : L2 individual meteorological sensors
+                'ETC NRT Fluxes' : NRT ecosystem fluxes
+                'ETC NRT Meteo' : NRT aggregated meteorological variables
+                'ETC NRT Meteosens' : NRT individual meteorological sensors
+                'Fluxnet Product' : Fluxnet Shuttle product for station
 
-              'L2' : ICOS L2 data
+            `product` can be comma-separated list of ICOS-CP data products.
 
-              'Fluxnet' : europe-fluxdata.eu data
-        meteo : str, optional
-            NRT : 'Meteo', 'Meteosens'
+            `product` can also be the filename of a file with a structure
+            as written, for example, by `write_icos` (-9999 as NaN allowed),
+            for example:
 
-            L2 : 'Meteo', 'Meteosens', 'Fluxnet'
+              TIMESTAMP_END,CO2 (µmol mol-1),FC (µmol m-2 s-1),...
+              2025-12-31 23:00:00,432.47,-9999,...
 
-            Fluxnet : ignored
-
-            (default: self.icos_meteo)
         startdate : string, optional
             First possible date in netcdf output file in ISO8601 format.
             (Default: first date in input file)
@@ -1286,16 +1288,14 @@ class prepSiteForcing(object):
             station = self.site_name
         if product == '':
             product = self.icos_product
-        if meteo == '':
-            meteo = self.icos_meteo
         if startdate is None:
             startdate = self.startdate
         if enddate is None:
             enddate = self.enddate
 
-        print(f'Read ICOS product {product} with meteo {meteo}')
+        print(f'Read ICOS product {product} for station {station}')
 
-        df, dfunit = read_icos(station, product=product, meteo=meteo,
+        df, dfunit = read_icos(station, product=product,
                                units=True, concat=True)
         in_columns = list(df.columns.copy())
         wanted_columns = list(self.dnames.values())

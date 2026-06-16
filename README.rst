@@ -10,6 +10,7 @@ Content
 -------
 
 Sections of the README are:
+
    * `About`_
    * `Installation`_
    * `Config file`_
@@ -58,7 +59,7 @@ There is no installation. Simply clone the repository:
 
    git clone https://github.com/mcuntz/prep_site_forcing.git
 
-and run the script:
+and run the script (once you have accounts and setup ICOS and ERA5):
 
 .. code-block:: bash
 
@@ -86,7 +87,8 @@ Requirements
 
 as well as
 
-   * cdsapi_  if ERA5 must be downloaded; needs a Copernicus account (see Section [ERA5])
+   * cdsapi_ if ERA5 must be downloaded; needs a Copernicus account
+     (see Section [ERA5])
    * `icoscp_core`_  if ICOS data is used (see Section [ICOS])
 
 
@@ -96,10 +98,11 @@ Config file
 The driver script ``prep_site_forcing.py`` is controlled by a
 configuration file, which is in the simple Python configparser
 format. It has sections with case-sensitive names in brackets,
-e.g. ``[Site]``, and case-insensitive options within each
-section. Mandatory sections are ``[Model]``, ``[Site]``, and
-``[VarNames]``. Further, the option ``input`` in ``[Options]`` must be
-set.
+e.g. ``[Site]``, and case-insensitive options within each section. Not
+giving an option in a section, e.g. commenting it, or just leaving it
+empty, e.g. ``mad_z =`` takes its default value.  Mandatory sections
+are ``[Model]``, ``[Site]``, and ``[VarNames]``. Further, the option
+``input`` in ``[Options]`` must be set.
 
 See ``FR-Hes.cfg`` for an example that can be used as a template for
 other sites. The example files is highly commented and should be
@@ -145,7 +148,9 @@ interpolation (``imputation_method = 0``) to fill gaps or using
 ERA5(-Land) data that gets bias-corrected with the existing local data
 (``imputation_method = 1``; Vuichard and Papale, ESSD 2013,
 https://doi.org/10.5194/essd-7-157-2015). Default is
-``imputation_method = 1``.
+``imputation_method = 1``. Note, that here it is filling
+meteorological variables, which should not be confounded with
+gap-filling of ecosystem fluxes.
 
 ``make_netcdf`` controls if a function ``ascii2netcdf`` from a file
 ``ascii2netcdf.py`` will be called. 'netcdf' is thereby replaced by
@@ -172,7 +177,7 @@ Section [Site]
 ^^^^^^^^^^^^^^
 
 Data in the section ``[Site]`` is mostly used to write the information
-into the netcdf file.  The site ``name`` is basically for information
+into the netcdf file. The site ``name`` is basically for information
 but it is also used as site id for ICOS stations. ``latitude`` and
 ``longitude`` are also used to download or extract ERA5(-Land)
 data. ``latitude`` is from -90 to 90 and ``longitude`` is from -180
@@ -253,7 +258,7 @@ the beginning of the time steps, ``0.5`` the middle, and ``1`` the end
 of the time steps. MuSICA, for example, is using the middle of the
 time step and ISBA is using the end of the time step in their forcing
 files. Time steps will hence be shifted appropriately in the
-``ascii2netcdf`` routines (not yet in the csv file).
+``ascii2netcdf`` routines (not in the csv file).
 
 For example:
 
@@ -288,11 +293,10 @@ specific. For example, MuSICA is using the netCDF default
 format (e.g. 1994-12-31 23:30) to restrict the forcing file between
 the two dates. Defaults are the first and last dates of the input file
 or input stream. ``startdate``, ``enddate``, and ``timestep`` have to
-be given if ``input`` is not ``file``, i.e. either ICOS or
-ERA5(-Land). In this cases, ``timestep`` will be the time step of the
-output file (by linear interpolation from hourly ICOS or ERA5(-Land)
-data). Notation such as 1800s or 30min can be used (`pandas
-timeseries`_).
+be given if ``input`` is ``ERA5``. In this cases, ``timestep`` will be
+the time step of the output file (by linear interpolation from (half-)hourly
+ICOS or ERA5(-Land) data). Notation such as 1800s or 30min can be used
+(`pandas timeseries`_).
 
 For example:
 
@@ -381,27 +385,27 @@ era5-land-ts (``*.csv``). The script ``get_era5.py`` checks for
 available variables and timesteps and downloads the missing
 information.
 
-If ``input = ERA5`` in ``[Options]``, then ERA data will directly used
-as forcing data.
+If ``input = ERA5`` in ``[Options]``, then ERA5 data will directly be
+used as forcing data.
 
 For example:
 
 .. code-block:: python
 
    [ERA5]
-   era5path = era5
    era5type = era5-land-ts
+   era5path = era5
 
 
 Section [CO2]
 ^^^^^^^^^^^^^
 
-Most ecosystem models need atmospheric CO2 concentrations. Missing
-data will be filled using a simple input file ``co2file``. The CO2
+Most ecosystem models need atmospheric CO<sub>2</sub> concentrations. Missing
+data will be filled using a simple input file ``co2file``. The CO<sub>2</sub>
 data provided (``cmip6_co2_hist-ssp370_1850-2100.csv``) are annual
 mean values from 1850 to 2100 from the CMIP6 SSP3.7 scenario. They are
 delimited by comma (``co2delimiter = ,``) with a decimal date in the
-first column (``co2date_column = 0``) and CO2 mixing ratios in ppm in
+first column (``co2date_column = 0``) and CO<sub>2</sub> mixing ratios in ppm in
 the second column (``co2co2_column = 1``). More sophisticated filling
 should replace the method ``fill_co2``.
 
@@ -423,7 +427,7 @@ Standard forcing variables for ecosystems models are shortwave
 incoming radiation (swdown), longwave incoming radiation (lwdown),
 atmospheric pressure (psurf), air temperature (tair) and humidity
 (qair), wind speed (wind_speed), precipitation (precip), as well as
-atmospheric CO2 concentration (co2). In addition, wind direction
+atmospheric CO<sub>2</sub> concentration (co2). In addition, wind direction
 (wind_dir) can be used, and MuSICA also needs the atmospheric boundary
 layer height for some applications. Precipitation can be separated in
 liquid (rainf) and solid (snowf) precipitation.
@@ -522,10 +526,13 @@ incoming radiation would be ``^Rg_Kipp H1``:
    name_wind_speed = WS_EC H1
    name_precip = Prec H1
 
-MuSICA might need more forcing variables such as isotopic forcing
-data. Extra variables ``extra_vars`` can hence be extracted from the
-input file and data stream and written into the output file with the
-names ``extra_names``. Note that these variables will not be imputed. Adding soil moisture and soil heat flux from the historical FR-Hes data to the forcing file would be:
+MuSICA, for example, might need more forcing variables such as
+isotopic forcing data. Extra variables ``extra_vars`` can hence be
+extracted from the input file and data stream and written into the
+output file with the names ``extra_names`` (not limited to
+MuSICA). Note that these variables will not be imputed. Adding mean
+soil moisture per soil depth and mean soil heat flux from the
+historical FR-Hes data to the forcing file would be:
 
 .. code-block:: python
 
@@ -553,7 +560,8 @@ variables can be given in the section ``[AlternativeVarNames]``. The
 alternative variables have to have the same units as the primary
 variables. Using average air temperatures but using only the main
 sensors of all other ICOS meteosens, and filling in the backup sensors
-in case of missing data would be:
+in case of missing data would be (and the air temperature sensor at a
+lower height):
 
 .. code-block:: python
 
@@ -574,7 +582,7 @@ in case of missing data would be:
    aname_psurf = PA_1_2_1
    aname_qair = RH_2_1_1
    aname_swdown = SW_IN_1_1_2
-   aname_tair = TA_2_1_1
+   aname_tair = TA_1_2_1
    aname_wind_dir =
    aname_wind_speed = WS_1_2_1
    aname_precip = P_2_1_1
@@ -585,6 +593,7 @@ Section [VarUnits]
 
 The script has to know the units of the variables, which are given in
 the section ``[VarUnits]``. Known units are:
+
    * ['W/m2', 'W m-2'] for shortave and longwave radiation
    * ['C', 'degreeC', 'degree C', 'degC', 'deg C', '°C'] for air
      temperature (otherwise Kelvin assumed)

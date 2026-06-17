@@ -21,6 +21,7 @@ History
    * Remove meteo keyword: use full ICOS product names,
      Matthias Cuntz, Jun 2026
    * Return units as dictionary, Matthias Cuntz, Jun 2026
+   * Concat columns and rows (datetime), Matthias Cuntz, Jun 2026
 
 '''
 import os
@@ -325,8 +326,9 @@ def read_icos(station, product='ETC L2 Meteosens',
     if concat:
         dfc = df[0]
         for idf in df[1:]:
-            # assumes same time steps
-            dfc = pd.concat([dfc, idf], axis=1)
+            # join rows and columns
+            dfc, idf = dfc.align(idf, join='outer', axis=None)
+            dfc = dfc.add(idf, fill_value=0)
         df = dfc
 
         if units:

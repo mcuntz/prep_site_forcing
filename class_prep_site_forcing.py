@@ -1299,7 +1299,6 @@ class prepSiteForcing(object):
                                units=True, concat=True)
         in_columns = list(df.columns.copy())
         wanted_columns = list(self.dnames.values())
-        icos_units = dict(zip(list(df.columns), dfunit))
 
         # filter quality flags
         if self.icos_qc < 2:
@@ -1373,7 +1372,7 @@ class prepSiteForcing(object):
         # update unit dictionary
         for dd in self.dnames:   # standard and extra vars
             if self.dnames[dd]:
-                self.dunits.update({dd: icos_units[self.dnames[dd]]})
+                self.dunits.update({dd: dfunit[self.dnames[dd]]})
 
         # start and end dates
         if startdate == '':

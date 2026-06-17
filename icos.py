@@ -20,6 +20,7 @@ History
    * Add command line interface, Matthias Cuntz, Jun 2026
    * Remove meteo keyword: use full ICOS product names,
      Matthias Cuntz, Jun 2026
+   * Return units as dictionary, Matthias Cuntz, Jun 2026
 
 '''
 import os
@@ -69,7 +70,9 @@ def _get_header_vars_units(arr):
             ivars.append(arr[ic].strip())
             iunits.append('')
 
-    return ivars, iunits
+    dunits = dict(zip(ivars, iunits))
+
+    return ivars, dunits
 
 
 # [ dd.label for dd in meta.list_datatypes() ]
@@ -216,7 +219,7 @@ def read_icos(station, product='ETC L2 Meteosens',
           2025-12-31 23:00:00,432.47,-9999,...
 
     units : bool, optional
-        Return also list of units for columns
+        Return also dictionary with units for variables
         (default: False)
     concat : bool, optional
         Concat different data streams into one pandas.DataFrame if True
@@ -224,7 +227,7 @@ def read_icos(station, product='ETC L2 Meteosens',
 
     Returns
     -------
-    (List of) pandas.DataFrame with ICOS-CP data products[, list of units]
+    (List of) pandas.DataFrame with ICOS-CP data products[, dict of units]
 
     '''
     # check if product is a file
@@ -312,10 +315,10 @@ def read_icos(station, product='ETC L2 Meteosens',
                 vt = vv.valueType
                 if hasattr(vt, 'unit'):
                     vunits.update({vv.label: vt.unit})
-            # units of selected variables (should be the same) 
-            iunit = []
+            # units of selected variables (should be the same to vunits)
+            iunit = {}
             for cc in idf.columns:
-                iunit.append(vunits[cc])
+                iunit.update({cc: vunits[cc]})
             # units of all products
             unit.append(iunit)
 
@@ -329,7 +332,7 @@ def read_icos(station, product='ETC L2 Meteosens',
         if units:
             unitc = unit[0]
             for iunit in unit[1:]:
-                unitc.extend(iunit)
+                unitc.update(iunit)
             unit = unitc
 
     if units:
@@ -378,13 +381,12 @@ def write_icos(station, outfile, product='ETC L2 Meteosens',
     if verbose:
         print(f'  Get ICOS product "{product}" for station "{station}".')
     df, dfunit = read_icos(station, product=product, units=True, concat=True)
-    icos_units = dict(zip(list(df.columns), dfunit))
 
     # include units in column names
     ocol = {}
     for cc in df.columns:
-        if cc in icos_units:
-            ocol.update({cc: f'{cc} ({icos_units[cc]})'})
+        if cc in dfunit:
+            ocol.update({cc: f'{cc} ({dfunit[cc]})'})
     if len(ocol) > 0:
         df.rename(columns=ocol, inplace=True)
 

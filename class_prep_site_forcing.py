@@ -1557,8 +1557,6 @@ class prepSiteForcing(object):
         # cumulative precip of first day
         tmin = df.index.min() - np.timedelta64(1, 'D')
         tmax = df.index.max()
-        #MC
-        tmax = df.index.max() - np.timedelta64(3, 'D')
         isoform = '%Y-%m-%d'
         date = tmin.strftime(isoform) + '/' + tmax.strftime(isoform)
 

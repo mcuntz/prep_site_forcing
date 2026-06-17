@@ -333,7 +333,7 @@ def read_icos(station, product='ETC L2 Meteosens',
 
         if units:
             unitc = {}
-            for iunit in unit:    # list of  dicts
+            for iunit in unit:    # list of dicts
                 for uu in iunit:  # dict entries
                     if uu in unitc:
                         if iunit[uu] != unitc[uu]:
@@ -341,7 +341,7 @@ def read_icos(station, product='ETC L2 Meteosens',
                                 f'Units are not the same for variable {uu}:'
                                 f' 1. {iunit[uu]}, 2. {unitc[uu]}.')
                     else:
-                        unitc.update(uu: iunit[uu])
+                        unitc.update({uu: iunit[uu]})
             unit = unitc
 
     if units:

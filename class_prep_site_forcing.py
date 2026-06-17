@@ -1558,6 +1558,8 @@ class prepSiteForcing(object):
         # cumulative precip of first day
         tmin = df.index.min() - np.timedelta64(1, 'D')
         tmax = df.index.max()
+        #MC
+        tmax = df.index.max() - np.timedelta64(3, 'D')
         isoform = '%Y-%m-%d'
         date = tmin.strftime(isoform) + '/' + tmax.strftime(isoform)
 
@@ -2147,6 +2149,9 @@ class prepSiteForcing(object):
             iforecast = self.check_forecast(ds)
             # set np.datetime64 to same precision
             df.index = df.index.astype(ds.index.dtype)
+            # set enddate to ERA5 end if later
+            if df.index[-1] > ds.index[-1]:
+                df = df[df.index <= ds.index[-1]]
 
         print('Fill')
         plotdict = dict()
@@ -2167,9 +2172,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'lwdown':
                     if self.imputation_method == 1:
@@ -2180,9 +2186,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'psurf':
                     if self.imputation_method == 1:
@@ -2190,9 +2197,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'qair':
                     if self.imputation_method == 1:
@@ -2202,8 +2210,9 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'tair':
                     if self.imputation_method == 1:
@@ -2211,9 +2220,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'wind_speed':
                     if self.imputation_method == 1:
@@ -2224,9 +2234,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'h_sbl':
                     if self.imputation_method == 1:
@@ -2237,7 +2248,8 @@ class prepSiteForcing(object):
                         elif isinstance(evar, xr.DataArray):
                             vtime = self.get_era5_time_name(evar)
                             ivar = np.interp(df.index, evar[vtime], evar)
-                        df[dd] = df[dd].where(df[dd].notna(), other=ivar)
+                        ivar = ivar.astype(df[dd].dtype)
+                        df.loc[:, dd] = df[dd].where(df[dd].notna(), other=ivar)
                 elif (dd == 'precip') or (dd == 'rainf'):
                     # data - rain, snow, and total precip
                     if dd == 'precip':
@@ -2249,9 +2261,9 @@ class prepSiteForcing(object):
                         snowf = df['snowf']
                     dvar = (rainf + snowf) / dt
                     if imputation_method == 0:
-                        df[dd] = df[dd].where(df[dd].notna(), other=0.)
+                        df.loc[:, dd] = df[dd].where(df[dd].notna(), other=0.)
                         if dd != 'precip':
-                            df['snowf'] = df['snowf'].where(
+                            df.loc[:, 'snowf'] = df['snowf'].where(
                                 df['snowf'].notna(), other=0.)
                     elif imputation_method == 1:
                         # era5 - total precip
@@ -2267,8 +2279,9 @@ class prepSiteForcing(object):
                         plotdict[pkey].update(pdict)
                         ivar = np.where(ivar > np.finfo(float).eps, ivar, 0.)
                         ivar *= dt
+                        ivar = ivar.astype(df[dd].dtype)
                         if dd == 'precip':
-                            df[dd] = df[dd].where(df[dd].notna(), other=ivar)
+                            df.loc[:, dd] = df[dd].where(df[dd].notna(), other=ivar)
                         else:
                             tair = ds['t2m']
                             if isinstance(tair, (pd.DataFrame, pd.Series)):
@@ -2292,8 +2305,10 @@ class prepSiteForcing(object):
                             tair = np.interp(df.index, ttair, tair)
                             rainf = np.where(tair >= 274.15, ivar, 0.)
                             snowf = np.where(tair < 274.15, ivar, 0.)
-                            df[dd] = df[dd].where(df[dd].notna(), other=rainf)
-                            df['snowf'] = df['snowf'].where(
+                            rainf = rainf.astype(df[dd].dtype)
+                            snowf = snowf.astype(df[dd].dtype)
+                            df.loc[:, dd] = df[dd].where(df[dd].notna(), other=rainf)
+                            df.loc[:, 'snowf'] = df['snowf'].where(
                                 df['snowf'].notna(), other=snowf)
                     else:
                         continue  # do not fill anything
@@ -2374,10 +2389,11 @@ class prepSiteForcing(object):
 
                 ivar = np.interp(co2.index.astype(ico2.index.dtype),
                                  ico2.index, ico2)
+            ivar = ivar.astype(idf['co2air'])
             if all(co2.isna()):
-                idf['co2air'] = ivar
+                idf.loc[:, 'co2air'] = ivar
             else:
-                idf['co2air'] = co2.where(co2.notna(), other=ivar)
+                idf.loc[:, 'co2air'] = co2.where(co2.notna(), other=ivar)
 
         # all NaN
         if all(idf['co2air'].isna()):
@@ -2413,11 +2429,11 @@ class prepSiteForcing(object):
 
         wdir = idf['wind_dir']
         if any(wdir.isna()) and (not all(wdir.isna())):
-            idf['wind_dir'] = wdir.where(wdir.notna(), other=wdir.median())
+            idf.loc[:, 'wind_dir'] = wdir.where(wdir.notna(), other=wdir.median())
 
         # all NaN
         if all(idf['wind_dir'].isna()):
-            idf['wind_dir'] = 0.
+            idf.loc[: 'wind_dir'] = 0.
 
         if not isinstance(df, str):
             return idf

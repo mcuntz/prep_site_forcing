@@ -88,8 +88,8 @@ Requirements
 as well as
 
    * cdsapi_ if ERA5 must be downloaded; needs a Copernicus account
-     (see Section [ERA5])
-   * `icoscp_core`_  if ICOS data is used (see Section [ICOS])
+     (see `Section [ERA5]`_)
+   * `icoscp_core`_  if ICOS data is used (see `Section [ICOS]`_)
 
 
 Config file
@@ -228,8 +228,8 @@ file. If ``rsl_yoyo`` is True, then the boundary layer height of ERA5
 will be added to the output file(s). Note that the variable
 ``boundary_layer_height`` or ``h_sbl`` is not in ERA5-Land but only in
 ERA5. So forcing files for runs with the so-called 'yoyo' in MuSICA
-must use ERA5 data instead of ERA5-Land data. Defaults are ``time2gmt
-= 0`` and ``rsl_yoyo = False``.
+must use ERA5 data instead of ERA5-Land data. Defaults are
+``time2gmt = 0`` and ``rsl_yoyo = False``.
 
 For example:
 
@@ -265,7 +265,7 @@ For example:
 .. code-block:: python
 
    [Input]
-   inputfile = /Users/cuntz/data/inrae/hesse/BD_Hesse/DB2/Hesse_DB2_1997.csv
+   inputfile = /home/mcuntz/Downloads/Hesse_DB2_1997.csv
    sep = ;
    header = 0
    index_col = 0
@@ -286,8 +286,8 @@ or ``prep_site_forcing.nc`` otherwise. The name of the csv file is the
 name of the output file with the suffix replaced by .csv. ``fill_value``
 is the missing value used in the netCDF file, which is highly model
 specific. For example, MuSICA is using the netCDF default
-``_FillValue`` (``fill_value =``), while ISBA is using ``fill_value =
--9999999``.
+``_FillValue`` (``fill_value =``), while ISBA is using
+``fill_value = -9999999``.
 
 ``startdate`` and ``enddate`` (both inclusive) can be given in ISO8601
 format (e.g. 1994-12-31 23:30) to restrict the forcing file between
@@ -303,7 +303,7 @@ For example:
 .. code-block:: python
 
    [Output]
-   outputfile = ISBA_in_FR-Hes_1997-era5-3.nc
+   outputfile = MuSICA_in_FR-Hes_1997-era5-3.nc
    fill_value = -9999999.
    startdate = 1997-05-01 00:00
    enddate = 1997-05-31 23:30
@@ -313,9 +313,9 @@ For example:
 Section [ICOS]
 ^^^^^^^^^^^^^^
 
-Input can also come directly from the ICOS Carbon Portal (``input =
-ICOS``) using the ``[Site].name`` as station id. One has to have the
-Python library `icoscp_core`_ installed and have it initialised with:
+Input can also come directly from the ICOS Carbon Portal (``input = ICOS``)
+using the ``[Site].name`` as station id. One has to have the Python
+library `icoscp_core`_ installed and have it initialised with:
 
 .. code-block:: python
 
@@ -374,9 +374,10 @@ be used and gaps filled with ERA5(-Land). Or:
    icos_qc = 2
 
 would use the long timeseries with variables filled by the ICOS
-ETC. One has to adapt the variables names to use depending on the
-chosen ICOS product. One can print available variables in a specific
-ICOS product with the script ``icos.py``:
+ETC. One has to adapt the variables names to use (`Section
+[VarNames]`_) depending on the chosen ICOS product. One can print
+available variables in a specific ICOS product with the script
+``icos.py``:
 
 .. code-block:: bash
 
@@ -387,10 +388,10 @@ the station FR-Hes. The data would be written into a local file
 without the -i option. See ``python icos.py -h`` for help.
 
 ``icos_product`` can also be the name of a local file in an
-appropriate standard format, i.e. it can be read with ``df =
-pd.read_csv(file, index_col=0, parse_dates=True,
-date_format='ISO8601', na_values='-9999')``. In this case, the units
-must be part of the header row, e.g. SW_IN (W m-2). For example:
+appropriate standard format, i.e. it can be read with
+``df = pd.read_csv(file, index_col=0, parse_dates=True, date_format='ISO8601', na_values='-9999')``.
+In this case, the units must be part of the header row, e.g. SW_IN (W
+m-2). For example:
 
 .. code-block:: bash
 
@@ -407,10 +408,10 @@ Missing values can be filled with ERA5 reanalysis data. There are the
 products ERA5 and ERA5-Land, which are on different resolutions (0.25
 vs 0.1 degree). Both are also stored in different formats, grib and
 zarr. The latter is optimised for remote access. This is indicated by
-'-ts' in the ``era5type`` name. It should generally be ``era5type =
-era5-land-ts``. ERA5-Land has no boundary layer height. So if
-``boundary_layer_height`` (or ``h_sbl``) is needed, such as in the
-case of ``rsl_yoyo = True``, then ``era5type = era5-ts`` is
+'-ts' in the ``era5type`` name. It should generally be
+``era5type = era5-land-ts``. ERA5-Land has no boundary layer
+height. So if ``boundary_layer_height`` (or ``h_sbl``) is needed, such
+as in the case of ``rsl_yoyo = True``, then ``era5type = era5-ts`` is
 preferred. The script will warn if ``era5type`` is ``era5-land-ts``
 and set it to ``era5-ts``.
 
@@ -480,13 +481,12 @@ relative humidity, specific humidity, or vapour pressure deficit
 (VPD). The variable will be identified by its unit (see below).
 
 The names can be regular expression such as ``TA_.*_1_1``. Columns will
-be filtered, which uses ``re.search(name,
-available_variables)``. Variables will be averaged over all columns
-found. The filtering with `re.search`_ implies that the name ``Var_1``,
-for example, also finds columns named ``Var_2/Var_1``, ``Var_1_QC``, or
-similar. In this case, one can start the variable name with ``^``,
-i.e. ``^Var_1`` in this case, or end it with ``$``, i.e. ``Var_1$``, for
-example.
+be filtered, which uses ``re.search(name, available_variables)``.
+Variables will be averaged over all columns found. The filtering with
+`re.search`_ implies that the name ``Var_1``, for example, also finds
+columns named ``Var_2/Var_1``, ``Var_1_QC``, or similar. In this case,
+one can start the variable name with ``^``, i.e. ``^Var_1`` in this
+case, or end it with ``$``, i.e. ``Var_1$``, for example.
 
 The ICOS Fluxnet product has for each variable also quality control
 columns, e.g. ``TA_F`` and ``TA_F_QC``. So one would end the variables
@@ -670,8 +670,8 @@ row (see section ``[ICOS]``).
 License
 -------
 
-``prep_site_forcing`` is distributed under the MIT License. See the LICENSE_ file
-for details.
+``prep_site_forcing`` is distributed under the MIT License. See the
+LICENSE_ file for details.
 
 Copyright (c) 2026- Matthias Cuntz
 

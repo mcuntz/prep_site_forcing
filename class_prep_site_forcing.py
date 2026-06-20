@@ -612,8 +612,12 @@ class prepSiteForcing(object):
         if ((leco == 'musica') and (self.fill_value is not None)):
             warnings.warn(f'\nfill_value should be empty for {self.ecomodel}')
 
-        if ((leco == 'isba') and (self.fill_value != -9999999.)):
-            warnings.warn(f'\nfill_value should be -9999999 for {self.ecomodel}')
+        if leco == 'isba':
+            if self.fill_value is None:
+                self.fill_value = -9999999.
+            elif self.fill_value != -9999999.:
+                warnings.warn(f'\nfill_value should be -9999999 for'
+                              f' {self.ecomodel}')
 
         return
 

@@ -84,8 +84,7 @@ if __name__ == '__main__':
     if prep.input.lower() == 'era5':
         df = prep.make_empty_data()
     elif prep.input.lower() == 'icos':
-        df = prep.read_icos_data(product=prep.icos_product,
-                                 meteo=prep.icos_meteo)
+        df = prep.read_icos_data(product=prep.icos_product)
         df = prep.convert_units(df)
     elif prep.input.lower() == 'file':
         df = prep.read_csv_data(prep.infile)

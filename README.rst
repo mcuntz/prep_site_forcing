@@ -10,6 +10,7 @@ Content
 -------
 
 Sections of the README are:
+
    * `About`_
    * `Installation`_
    * `Config file`_
@@ -58,7 +59,7 @@ There is no installation. Simply clone the repository:
 
    git clone https://github.com/mcuntz/prep_site_forcing.git
 
-and run the script:
+and run the script (once you have accounts and setup ICOS and ERA5):
 
 .. code-block:: bash
 
@@ -86,8 +87,9 @@ Requirements
 
 as well as
 
-   * cdsapi_  if ERA5 must be downloaded; needs a Copernicus account (see Section [ERA5])
-   * `icoscp_core`_  if ICOS data is used (see Section [ICOS])
+   * cdsapi_ if ERA5 must be downloaded; needs a Copernicus account
+     (see `Section [ERA5]`_)
+   * `icoscp_core`_  if ICOS data is used (see `Section [ICOS]`_)
 
 
 Config file
@@ -96,10 +98,11 @@ Config file
 The driver script ``prep_site_forcing.py`` is controlled by a
 configuration file, which is in the simple Python configparser
 format. It has sections with case-sensitive names in brackets,
-e.g. ``[Site]``, and case-insensitive options within each
-section. Mandatory sections are ``[Model]``, ``[Site]``, and
-``[VarNames]``. Further, the option ``input`` in ``[Options]`` must be
-set.
+e.g. ``[Site]``, and case-insensitive options within each section. Not
+giving an option in a section, e.g. commenting it, or just leaving it
+empty, e.g. ``mad_z =`` takes its default value.  Mandatory sections
+are ``[Model]``, ``[Site]``, and ``[VarNames]``. Further, the option
+``input`` in ``[Options]`` must be set.
 
 See ``FR-Hes.cfg`` for an example that can be used as a template for
 other sites. The example files is highly commented and should be
@@ -145,7 +148,9 @@ interpolation (``imputation_method = 0``) to fill gaps or using
 ERA5(-Land) data that gets bias-corrected with the existing local data
 (``imputation_method = 1``; Vuichard and Papale, ESSD 2013,
 https://doi.org/10.5194/essd-7-157-2015). Default is
-``imputation_method = 1``.
+``imputation_method = 1``. Note, that here it is filling
+meteorological variables, which should not be confounded with
+gap-filling of ecosystem fluxes.
 
 ``make_netcdf`` controls if a function ``ascii2netcdf`` from a file
 ``ascii2netcdf.py`` will be called. 'netcdf' is thereby replaced by
@@ -172,7 +177,7 @@ Section [Site]
 ^^^^^^^^^^^^^^
 
 Data in the section ``[Site]`` is mostly used to write the information
-into the netcdf file.  The site ``name`` is basically for information
+into the netcdf file. The site ``name`` is basically for information
 but it is also used as site id for ICOS stations. ``latitude`` and
 ``longitude`` are also used to download or extract ERA5(-Land)
 data. ``latitude`` is from -90 to 90 and ``longitude`` is from -180
@@ -223,8 +228,8 @@ file. If ``rsl_yoyo`` is True, then the boundary layer height of ERA5
 will be added to the output file(s). Note that the variable
 ``boundary_layer_height`` or ``h_sbl`` is not in ERA5-Land but only in
 ERA5. So forcing files for runs with the so-called 'yoyo' in MuSICA
-must use ERA5 data instead of ERA5-Land data. Defaults are ``time2gmt
-= 0`` and ``rsl_yoyo = False``.
+must use ERA5 data instead of ERA5-Land data. Defaults are
+``time2gmt = 0`` and ``rsl_yoyo = False``.
 
 For example:
 
@@ -253,14 +258,14 @@ the beginning of the time steps, ``0.5`` the middle, and ``1`` the end
 of the time steps. MuSICA, for example, is using the middle of the
 time step and ISBA is using the end of the time step in their forcing
 files. Time steps will hence be shifted appropriately in the
-``ascii2netcdf`` routines (not yet in the csv file).
+``ascii2netcdf`` routines (not in the csv file).
 
 For example:
 
 .. code-block:: python
 
    [Input]
-   inputfile = /Users/cuntz/data/inrae/hesse/BD_Hesse/DB2/Hesse_DB2_1997.csv
+   inputfile = /home/mcuntz/Downloads/Hesse_DB2_1997.csv
    sep = ;
    header = 0
    index_col = 0
@@ -281,25 +286,24 @@ or ``prep_site_forcing.nc`` otherwise. The name of the csv file is the
 name of the output file with the suffix replaced by .csv. ``fill_value``
 is the missing value used in the netCDF file, which is highly model
 specific. For example, MuSICA is using the netCDF default
-``_FillValue`` (``fill_value =``), while ISBA is using ``fill_value =
--9999999``.
+``_FillValue`` (``fill_value =``), while ISBA is using
+``fill_value = -9999999``.
 
 ``startdate`` and ``enddate`` (both inclusive) can be given in ISO8601
 format (e.g. 1994-12-31 23:30) to restrict the forcing file between
 the two dates. Defaults are the first and last dates of the input file
 or input stream. ``startdate``, ``enddate``, and ``timestep`` have to
-be given if ``input`` is not ``file``, i.e. either ICOS or
-ERA5(-Land). In this cases, ``timestep`` will be the time step of the
-output file (by linear interpolation from hourly ICOS or ERA5(-Land)
-data). Notation such as 1800s or 30min can be used (`pandas
-timeseries`_).
+be given if ``input`` is ``ERA5``. In this cases, ``timestep`` will be
+the time step of the output file (by linear interpolation from (half-)hourly
+ICOS or ERA5(-Land) data). Notation such as 1800s or 30min can be used
+(`pandas timeseries`_).
 
 For example:
 
 .. code-block:: python
 
    [Output]
-   outputfile = ISBA_in_FR-Hes_1997-era5-3.nc
+   outputfile = MuSICA_in_FR-Hes_1997-era5-3.nc
    fill_value = -9999999.
    startdate = 1997-05-01 00:00
    enddate = 1997-05-31 23:30
@@ -311,25 +315,81 @@ Section [ICOS]
 
 Input can also come directly from the ICOS Carbon Portal (``input =
 ICOS``) using the ``[Site].name`` as station id. One has to have the
-Python library `icoscp_core`_ installed and have it initialised with:
+Python library `icoscp_core`_ installed and have it initialised once
+(on each computer) with:
 
 .. code-block:: python
 
    from icoscp_core.icos import auth
    auth.init_config_file()
 
-Known ``icos_product`` are L2, NRT, and Fluxnet. For ``icos_meteo``,
-one can use the original Meteosens stream for L2 and NRT, which gives
-the individual meteorological variables such as SW_IN_1_1_1 and
-SW_IN_1_1_2. Or one uses the Meteo stream, which has all redundant
-variables aggregated into one variable such as SW_IN. Or one uses the
-Fluxnet meteo stream, which gives gap-filled aggregated variables such
-as SW_IN_F.  ``icos_product = Fluxnet`` includes not only ICOS data
-but also pre-ICOS data for the site in the same gap-filled Fluxnet
-meteo format. ``icos_meteo`` is ignored in this case.
+The ICOS carbon portal basically provides three products: L2, NRT, and
+Fluxnet. L2 is the yearly quality-controlled ICOS release (in March)
+of the station data since its official labelling as an ICOS site. NRT
+is near-real-time data, which is the site data since the L2
+release. This is the raw data with little quality control but runs up
+to about 1-2 days before the download. Fluxnet is any data that the
+station provided to include in the Fluxnet shuttle. This can include
+all historical data at a site and can include the ICOS L2 data, or it
+can be independent data, for example from another measurement
+system. The option ``icos_product`` selects one or several
+(comma-delimited) products:
 
-``icos_product`` can also be the name of a local file in a appropriate
-standard format, i.e. it can be read with
+   - 'ETC L2 Fluxes' : L2 ecosystem fluxes
+   - 'ETC L2 Meteosens' : L2 individual meteorological sensors
+   - 'ETC L2 Meteo' : L2 aggregated meteorological variables
+   - 'ETC L2 Fluxnet (half-hourly)' : Fluxnet product of L2 data
+   - 'ETC NRT Fluxes' : NRT ecosystem fluxes
+   - 'ETC NRT Meteosens' : NRT individual meteorological sensors
+   - 'ETC NRT Meteo' : NRT aggregated meteorological variables
+   - 'Fluxnet Product' : Fluxnet Shuttle product
+
+The products with 'Meteosens' include all individual meteorological
+variables such as SW_IN_1_1_1 and SW_IN_1_1_2. 'Meteo' has all
+redundant variables aggregated into one variable such as SW_IN.
+Products with 'Fluxnet' have all redundant variables aggregated and
+filled with ERA5 data such as SW_IN_F.
+
+One can use the quality flag for aggregated variables. ``icos_qc`` is
+the maximum quality flag used. That means ``icos_qc = 2`` uses all
+data, and ``icos_qc = 0`` uses only the original, measured
+data. Filling of data gaps will then be done with ERA5(-Land) (see
+below).
+     
+A typical ICOS block would be:
+
+.. code-block:: python
+
+   [ICOS]
+   icos_product = ETC L2 Fluxes,ETC L2 Meteosens
+   icos_qc = 0
+
+The 'ETC L2 Fluxes' product would be included because it contains the
+CO2 concentrations. Only the original, measured data would
+be used and gaps filled with ERA5(-Land).
+
+.. code-block:: python
+
+   [ICOS]
+   icos_product = Fluxnet Product
+   icos_qc = 2
+
+would use the long timeseries with variables filled by the ICOS
+ETC. One has to adapt the variable names to use (`Section
+[VarNames]`_) depending on the chosen ICOS product. One can print
+available variables in a specific ICOS product with the script
+``icos.py``, for example:
+
+.. code-block:: bash
+
+   python icos.py -i -p 'ETC L2 Meteosens' FR-Hes
+
+prints all available variables in the product 'ETC L2 Meteosens' for
+the station FR-Hes. The data would be written into a local file
+without the -i option. See ``python icos.py -h`` for help.
+
+``icos_product`` can also be the name of a local file in an
+appropriate standard format, i.e. it can be read with
 ``df = pd.read_csv(file, index_col=0, parse_dates=True, date_format='ISO8601', na_values='-9999')``.
 In this case, the units must be part of the header row, e.g. SW_IN (W
 m-2). For example:
@@ -339,23 +399,7 @@ m-2). For example:
    TIMESTAMP_END,CO2 (µmol mol-1),...
    2025-12-31 23:00:00,432.47,...
 
-Such a file can be produced, for example, using the function
-``write_icos`` in ``icos.py``.
-
-One can use the quality flag for aggregated variables. ``icos_qc`` is
-the maximum quality flag used. That means ``icos_qc = 2`` uses all
-data, and ``icos_qc = 0`` uses only the original, measured
-data. Filling of data gaps will then be done with ERA5(-Land) data
-(see below).
-
-For example:
-
-.. code-block:: python
-
-   [ICOS]
-   icos_product = L2
-   icos_meteo = Meteosens
-   icos_qc = 2
+Such a file is produced, for example, by the script ``icos.py``.
 
 
 Section [ERA5]
@@ -365,10 +409,10 @@ Missing values can be filled with ERA5 reanalysis data. There are the
 products ERA5 and ERA5-Land, which are on different resolutions (0.25
 vs 0.1 degree). Both are also stored in different formats, grib and
 zarr. The latter is optimised for remote access. This is indicated by
-'-ts' in the ``era5type`` name. It should generally be ``era5type =
-era5-land-ts``. ERA5-Land has no boundary layer height. So if
-``boundary_layer_height`` (or ``h_sbl``) is needed, such as in the
-case of ``rsl_yoyo = True``, then ``era5type = era5-ts`` is
+'-ts' in the ``era5type`` name. It should generally be
+``era5type = era5-land-ts``. ERA5-Land has no boundary layer
+height. So if ``boundary_layer_height`` (or ``h_sbl``) is needed, such
+as in the case of ``rsl_yoyo = True``, then ``era5type = era5-ts`` is
 preferred. The script will warn if ``era5type`` is ``era5-land-ts``
 and set it to ``era5-ts``.
 
@@ -381,16 +425,16 @@ era5-land-ts (``*.csv``). The script ``get_era5.py`` checks for
 available variables and timesteps and downloads the missing
 information.
 
-If ``input = ERA5`` in ``[Options]``, then ERA data will directly used
-as forcing data.
+If ``input = ERA5`` in ``[Options]``, then ERA5 data will directly be
+used as forcing data.
 
 For example:
 
 .. code-block:: python
 
    [ERA5]
-   era5path = era5
    era5type = era5-land-ts
+   era5path = era5
 
 
 Section [CO2]
@@ -438,13 +482,12 @@ relative humidity, specific humidity, or vapour pressure deficit
 (VPD). The variable will be identified by its unit (see below).
 
 The names can be regular expression such as ``TA_.*_1_1``. Columns will
-be filtered, which uses ``re.search(name,
-available_variables)``. Variables will be averaged over all columns
-found. The filtering with `re.search`_ implies that the name ``Var_1``,
-for example, also finds columns named ``Var_2/Var_1``, ``Var_1_QC``, or
-similar. In this case, one can start the variable name with ``^``,
-i.e. ``^Var_1`` in this case, or end it with ``$``, i.e. ``Var_1$``, for
-example.
+be filtered, which uses ``re.search(name, available_variables)``.
+Variables will be averaged over all columns found. The filtering with
+`re.search`_ implies that the name ``Var_1``, for example, also finds
+columns named ``Var_2/Var_1``, ``Var_1_QC``, or similar. In this case,
+one can start the variable name with ``^``, i.e. ``^Var_1`` in this
+case, or end it with ``$``, i.e. ``Var_1$``, for example.
 
 The ICOS Fluxnet product has for each variable also quality control
 columns, e.g. ``TA_F`` and ``TA_F_QC``. So one would end the variables
@@ -522,10 +565,13 @@ incoming radiation would be ``^Rg_Kipp H1``:
    name_wind_speed = WS_EC H1
    name_precip = Prec H1
 
-MuSICA might need more forcing variables such as isotopic forcing
-data. Extra variables ``extra_vars`` can hence be extracted from the
-input file and data stream and written into the output file with the
-names ``extra_names``. Note that these variables will not be imputed. Adding soil moisture and soil heat flux from the historical FR-Hes data to the forcing file would be:
+MuSICA, for example, might need more forcing variables such as
+isotopic forcing data. Extra variables ``extra_vars`` can hence be
+extracted from the input file and data stream and written into the
+output file with the names ``extra_names`` (not limited to
+MuSICA). Note that these variables will not be imputed. Adding mean
+soil moisture per soil depth and mean soil heat flux from the
+historical FR-Hes data to the forcing file would be:
 
 .. code-block:: python
 
@@ -553,7 +599,8 @@ variables can be given in the section ``[AlternativeVarNames]``. The
 alternative variables have to have the same units as the primary
 variables. Using average air temperatures but using only the main
 sensors of all other ICOS meteosens, and filling in the backup sensors
-in case of missing data would be:
+in case of missing data would be (and the air temperature sensor at a
+lower height):
 
 .. code-block:: python
 
@@ -574,7 +621,7 @@ in case of missing data would be:
    aname_psurf = PA_1_2_1
    aname_qair = RH_2_1_1
    aname_swdown = SW_IN_1_1_2
-   aname_tair = TA_2_1_1
+   aname_tair = TA_1_2_1
    aname_wind_dir =
    aname_wind_speed = WS_1_2_1
    aname_precip = P_2_1_1
@@ -585,6 +632,7 @@ Section [VarUnits]
 
 The script has to know the units of the variables, which are given in
 the section ``[VarUnits]``. Known units are:
+
    * ['W/m2', 'W m-2'] for shortave and longwave radiation
    * ['C', 'degreeC', 'degree C', 'degC', 'deg C', '°C'] for air
      temperature (otherwise Kelvin assumed)
@@ -623,8 +671,8 @@ row (see section ``[ICOS]``).
 License
 -------
 
-``prep_site_forcing`` is distributed under the MIT License. See the LICENSE_ file
-for details.
+``prep_site_forcing`` is distributed under the MIT License. See the
+LICENSE_ file for details.
 
 Copyright (c) 2026- Matthias Cuntz
 

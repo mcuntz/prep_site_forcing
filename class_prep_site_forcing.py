@@ -293,11 +293,10 @@ class prepSiteForcing(object):
         self.timestep = ''
         # ICOS
         self.icos_product = ''
-        self.icos_meteo = ''
         self.icos_qc = 2
         # ERA5
-        self.era5path = '.'
         self.era5type = 'era5-land-ts'
+        self.era5path = '.'
         # CO2
         self.co2_file = ''
         self.co2_sep = None
@@ -482,14 +481,12 @@ class prepSiteForcing(object):
         # ICOS
         if cfg.has_section('ICOS'):
             self.icos_product = cfg['ICOS'].get('icos_product', '')
-            self.icos_meteo = cfg['ICOS'].get('icos_meteo', '')
             self.icos_qc = str2int(cfg['ICOS'].get('icos_qc', ''), 2)
 
         # ERA5
         if cfg.has_section('ERA5'):
-            self.era5path = cfg['ERA5'].get('era', '.')
-            self.era5path = cfg['ERA5'].get('era5path', self.era5path)
             self.era5type = cfg['ERA5'].get('era5type', 'era5-land-ts')
+            self.era5path = cfg['ERA5'].get('era5path', '.')
 
         # CO2
         if cfg.has_section('CO2'):
@@ -615,8 +612,12 @@ class prepSiteForcing(object):
         if ((leco == 'musica') and (self.fill_value is not None)):
             warnings.warn(f'\nfill_value should be empty for {self.ecomodel}')
 
-        if ((leco == 'isba') and (self.fill_value != -9999999.)):
-            warnings.warn(f'\nfill_value should be -9999999 for {self.ecomodel}')
+        if leco == 'isba':
+            if self.fill_value is None:
+                self.fill_value = -9999999.
+            elif self.fill_value != -9999999.:
+                warnings.warn(f'\nfill_value should be -9999999 for'
+                              f' {self.ecomodel}')
 
         return
 
@@ -1243,7 +1244,7 @@ class prepSiteForcing(object):
         return df
 
 
-    def read_icos_data(self, station='', product='', meteo='',
+    def read_icos_data(self, station='', product='',
                        startdate=None, enddate=None):
         """
         Read data, get datetime, select columns, select time_span
@@ -1254,19 +1255,24 @@ class prepSiteForcing(object):
             ICOS Station name (default: self.site_name)
         product : str, optional
             ICOS-CP data product (default: self.icos_product)
-              'NRT' : near-real-time data
+                'ETC L2 Fluxes' : L2 ecosystem fluxes
+                'ETC L2 Fluxnet (half-hourly)' : Fluxnet product for ICOS L2 data
+                'ETC L2 Meteo' : L2 aggregated meteorological variables
+                'ETC L2 Meteosens' : L2 individual meteorological sensors
+                'ETC NRT Fluxes' : NRT ecosystem fluxes
+                'ETC NRT Meteo' : NRT aggregated meteorological variables
+                'ETC NRT Meteosens' : NRT individual meteorological sensors
+                'Fluxnet Product' : Fluxnet Shuttle product for station
 
-              'L2' : ICOS L2 data
+            `product` can be comma-separated list of ICOS-CP data products.
 
-              'Fluxnet' : europe-fluxdata.eu data
-        meteo : str, optional
-            NRT : 'Meteo', 'Meteosens'
+            `product` can also be the filename of a file with a structure
+            as written, for example, by `write_icos` (-9999 as NaN allowed),
+            for example:
 
-            L2 : 'Meteo', 'Meteosens', 'Fluxnet'
+              TIMESTAMP_END,CO2 (µmol mol-1),FC (µmol m-2 s-1),...
+              2025-12-31 23:00:00,432.47,-9999,...
 
-            Fluxnet : ignored
-
-            (default: self.icos_meteo)
         startdate : string, optional
             First possible date in netcdf output file in ISO8601 format.
             (Default: first date in input file)
@@ -1286,20 +1292,17 @@ class prepSiteForcing(object):
             station = self.site_name
         if product == '':
             product = self.icos_product
-        if meteo == '':
-            meteo = self.icos_meteo
         if startdate is None:
             startdate = self.startdate
         if enddate is None:
             enddate = self.enddate
 
-        print(f'Read ICOS product {product} with meteo {meteo}')
+        print(f'Read ICOS product {product} for station {station}')
 
-        df, dfunit = read_icos(station, product=product, meteo=meteo,
+        df, dfunit = read_icos(station, product=product,
                                units=True, concat=True)
         in_columns = list(df.columns.copy())
         wanted_columns = list(self.dnames.values())
-        icos_units = dict(zip(list(df.columns), dfunit))
 
         # filter quality flags
         if self.icos_qc < 2:
@@ -1373,7 +1376,7 @@ class prepSiteForcing(object):
         # update unit dictionary
         for dd in self.dnames:   # standard and extra vars
             if self.dnames[dd]:
-                self.dunits.update({dd: icos_units[self.dnames[dd]]})
+                self.dunits.update({dd: dfunit[self.dnames[dd]]})
 
         # start and end dates
         if startdate == '':
@@ -2147,6 +2150,9 @@ class prepSiteForcing(object):
             iforecast = self.check_forecast(ds)
             # set np.datetime64 to same precision
             df.index = df.index.astype(ds.index.dtype)
+            # set enddate to ERA5 end if later
+            if df.index[-1] > ds.index[-1]:
+                df = df[df.index <= ds.index[-1]]
 
         print('Fill')
         plotdict = dict()
@@ -2167,9 +2173,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'lwdown':
                     if self.imputation_method == 1:
@@ -2180,9 +2187,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'psurf':
                     if self.imputation_method == 1:
@@ -2190,9 +2198,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'qair':
                     if self.imputation_method == 1:
@@ -2202,8 +2211,9 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'tair':
                     if self.imputation_method == 1:
@@ -2211,9 +2221,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'wind_speed':
                     if self.imputation_method == 1:
@@ -2224,9 +2235,10 @@ class prepSiteForcing(object):
                     else:
                         evar = None
                     plotdict.update({pkey: {'data': df[dd], 'era': evar}})
-                    df[dd], pdict = self.impute_data(
+                    out, pdict = self.impute_data(
                         df[dd], evar, minimum=0.,
                         imputation_method=imputation_method)
+                    df.loc[:, dd] = out.astype(df[dd].dtype)
                     plotdict[pkey].update(pdict)
                 elif dd == 'h_sbl':
                     if self.imputation_method == 1:
@@ -2237,7 +2249,8 @@ class prepSiteForcing(object):
                         elif isinstance(evar, xr.DataArray):
                             vtime = self.get_era5_time_name(evar)
                             ivar = np.interp(df.index, evar[vtime], evar)
-                        df[dd] = df[dd].where(df[dd].notna(), other=ivar)
+                        ivar = ivar.astype(df[dd].dtype)
+                        df.loc[:, dd] = df[dd].where(df[dd].notna(), other=ivar)
                 elif (dd == 'precip') or (dd == 'rainf'):
                     # data - rain, snow, and total precip
                     if dd == 'precip':
@@ -2249,9 +2262,9 @@ class prepSiteForcing(object):
                         snowf = df['snowf']
                     dvar = (rainf + snowf) / dt
                     if imputation_method == 0:
-                        df[dd] = df[dd].where(df[dd].notna(), other=0.)
+                        df.loc[:, dd] = df[dd].where(df[dd].notna(), other=0.)
                         if dd != 'precip':
-                            df['snowf'] = df['snowf'].where(
+                            df.loc[:, 'snowf'] = df['snowf'].where(
                                 df['snowf'].notna(), other=0.)
                     elif imputation_method == 1:
                         # era5 - total precip
@@ -2267,8 +2280,9 @@ class prepSiteForcing(object):
                         plotdict[pkey].update(pdict)
                         ivar = np.where(ivar > np.finfo(float).eps, ivar, 0.)
                         ivar *= dt
+                        ivar = ivar.astype(df[dd].dtype)
                         if dd == 'precip':
-                            df[dd] = df[dd].where(df[dd].notna(), other=ivar)
+                            df.loc[:, dd] = df[dd].where(df[dd].notna(), other=ivar)
                         else:
                             tair = ds['t2m']
                             if isinstance(tair, (pd.DataFrame, pd.Series)):
@@ -2292,8 +2306,10 @@ class prepSiteForcing(object):
                             tair = np.interp(df.index, ttair, tair)
                             rainf = np.where(tair >= 274.15, ivar, 0.)
                             snowf = np.where(tair < 274.15, ivar, 0.)
-                            df[dd] = df[dd].where(df[dd].notna(), other=rainf)
-                            df['snowf'] = df['snowf'].where(
+                            rainf = rainf.astype(df[dd].dtype)
+                            snowf = snowf.astype(df[dd].dtype)
+                            df.loc[:, dd] = df[dd].where(df[dd].notna(), other=rainf)
+                            df.loc[:, 'snowf'] = df['snowf'].where(
                                 df['snowf'].notna(), other=snowf)
                     else:
                         continue  # do not fill anything
@@ -2374,10 +2390,11 @@ class prepSiteForcing(object):
 
                 ivar = np.interp(co2.index.astype(ico2.index.dtype),
                                  ico2.index, ico2)
+            ivar = ivar.astype(idf['co2air'])
             if all(co2.isna()):
-                idf['co2air'] = ivar
+                idf.loc[:, 'co2air'] = ivar
             else:
-                idf['co2air'] = co2.where(co2.notna(), other=ivar)
+                idf.loc[:, 'co2air'] = co2.where(co2.notna(), other=ivar)
 
         # all NaN
         if all(idf['co2air'].isna()):
@@ -2413,11 +2430,12 @@ class prepSiteForcing(object):
 
         wdir = idf['wind_dir']
         if any(wdir.isna()) and (not all(wdir.isna())):
-            idf['wind_dir'] = wdir.where(wdir.notna(), other=wdir.median())
+            idf.loc[:, 'wind_dir'] = wdir.where(wdir.notna(),
+                                                other=wdir.median())
 
         # all NaN
         if all(idf['wind_dir'].isna()):
-            idf['wind_dir'] = 0.
+            idf.loc[:, 'wind_dir'] = 0.
 
         if not isinstance(df, str):
             return idf

@@ -313,9 +313,10 @@ For example:
 Section [ICOS]
 ^^^^^^^^^^^^^^
 
-Input can also come directly from the ICOS Carbon Portal (``input = ICOS``)
-using the ``[Site].name`` as station id. One has to have the Python
-library `icoscp_core`_ installed and have it initialised with:
+Input can also come directly from the ICOS Carbon Portal (``input =
+ICOS``) using the ``[Site].name`` as station id. One has to have the
+Python library `icoscp_core`_ installed and have it initialised once
+(on each computer) with:
 
 .. code-block:: python
 
@@ -324,7 +325,7 @@ library `icoscp_core`_ installed and have it initialised with:
 
 The ICOS carbon portal basically provides three products: L2, NRT, and
 Fluxnet. L2 is the yearly quality-controlled ICOS release (in March)
-of the station data since its official labeling as an ICOS site. NRT
+of the station data since its official labelling as an ICOS site. NRT
 is near-real-time data, which is the site data since the L2
 release. This is the raw data with little quality control but runs up
 to about 1-2 days before the download. Fluxnet is any data that the
@@ -364,8 +365,8 @@ A typical ICOS block would be:
    icos_qc = 0
 
 The 'ETC L2 Fluxes' product would be included because it contains the
-CO<sub>2</sub> concentrations. Only the original, measured data would
-be used and gaps filled with ERA5(-Land). Or:
+CO2 concentrations. Only the original, measured data would
+be used and gaps filled with ERA5(-Land).
 
 .. code-block:: python
 
@@ -374,10 +375,10 @@ be used and gaps filled with ERA5(-Land). Or:
    icos_qc = 2
 
 would use the long timeseries with variables filled by the ICOS
-ETC. One has to adapt the variables names to use (`Section
+ETC. One has to adapt the variable names to use (`Section
 [VarNames]`_) depending on the chosen ICOS product. One can print
 available variables in a specific ICOS product with the script
-``icos.py``:
+``icos.py``, for example:
 
 .. code-block:: bash
 
@@ -439,12 +440,12 @@ For example:
 Section [CO2]
 ^^^^^^^^^^^^^
 
-Most ecosystem models need atmospheric CO<sub>2</sub> concentrations. Missing
-data will be filled using a simple input file ``co2file``. The CO<sub>2</sub>
+Most ecosystem models need atmospheric CO2 concentrations. Missing
+data will be filled using a simple input file ``co2file``. The CO2
 data provided (``cmip6_co2_hist-ssp370_1850-2100.csv``) are annual
 mean values from 1850 to 2100 from the CMIP6 SSP3.7 scenario. They are
 delimited by comma (``co2delimiter = ,``) with a decimal date in the
-first column (``co2date_column = 0``) and CO<sub>2</sub> mixing ratios in ppm in
+first column (``co2date_column = 0``) and CO2 mixing ratios in ppm in
 the second column (``co2co2_column = 1``). More sophisticated filling
 should replace the method ``fill_co2``.
 
@@ -466,7 +467,7 @@ Standard forcing variables for ecosystems models are shortwave
 incoming radiation (swdown), longwave incoming radiation (lwdown),
 atmospheric pressure (psurf), air temperature (tair) and humidity
 (qair), wind speed (wind_speed), precipitation (precip), as well as
-atmospheric CO<sub>2</sub> concentration (co2). In addition, wind direction
+atmospheric CO2 concentration (co2). In addition, wind direction
 (wind_dir) can be used, and MuSICA also needs the atmospheric boundary
 layer height for some applications. Precipitation can be separated in
 liquid (rainf) and solid (snowf) precipitation.

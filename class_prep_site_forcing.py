@@ -2430,11 +2430,12 @@ class prepSiteForcing(object):
 
         wdir = idf['wind_dir']
         if any(wdir.isna()) and (not all(wdir.isna())):
-            idf.loc[:, 'wind_dir'] = wdir.where(wdir.notna(), other=wdir.median())
+            idf.loc[:, 'wind_dir'] = wdir.where(wdir.notna(),
+                                                other=wdir.median())
 
         # all NaN
         if all(idf['wind_dir'].isna()):
-            idf.loc[: 'wind_dir'] = 0.
+            idf.loc[:, 'wind_dir'] = 0.
 
         if not isinstance(df, str):
             return idf

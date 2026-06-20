@@ -322,44 +322,82 @@ Python library `icoscp_core`_ installed and have it initialised with:
    from icoscp_core.icos import auth
    auth.init_config_file()
 
-Known ``icos_product`` are L2, NRT, and Fluxnet. For ``icos_meteo``,
-one can use the original Meteosens stream for L2 and NRT, which gives
-the individual meteorological variables such as SW_IN_1_1_1 and
-SW_IN_1_1_2. Or one uses the Meteo stream, which has all redundant
-variables aggregated into one variable such as SW_IN. Or one uses the
-Fluxnet meteo stream, which gives gap-filled aggregated variables such
-as SW_IN_F.  ``icos_product = Fluxnet`` includes not only ICOS data
-but also pre-ICOS data for the site in the same gap-filled Fluxnet
-meteo format. ``icos_meteo`` is ignored in this case.
+The ICOS carbon portal basically provides three products: L2, NRT, and
+Fluxnet. L2 is the yearly quality-controlled ICOS release (in March)
+of the station data since its official labeling as an ICOS site. NRT
+is near-real-time data, which is the site data since the L2
+release. This is the raw data with little quality control but runs up
+to about 1-2 days before the download. Fluxnet is any data that the
+station provided to include in the Fluxnet shuttle. This can include
+all historical data at a site and can include the ICOS L2 data, or it
+can be independent data, for example from another measurement
+system. The option ``icos_product`` selects one or several
+(comma-delimited) products:
 
-``icos_product`` can also be the name of a local file in a appropriate
-standard format, i.e. it can be read with
-``df = pd.read_csv(file, index_col=0, parse_dates=True, date_format='ISO8601', na_values='-9999')``.
-In this case, the units must be part of the header row, e.g. SW_IN (W
-m-2). For example:
+   - 'ETC L2 Fluxes' : L2 ecosystem fluxes
+   - 'ETC L2 Meteosens' : L2 individual meteorological sensors
+   - 'ETC L2 Meteo' : L2 aggregated meteorological variables
+   - 'ETC L2 Fluxnet (half-hourly)' : Fluxnet product of L2 data
+   - 'ETC NRT Fluxes' : NRT ecosystem fluxes
+   - 'ETC NRT Meteosens' : NRT individual meteorological sensors
+   - 'ETC NRT Meteo' : NRT aggregated meteorological variables
+   - 'Fluxnet Product' : Fluxnet Shuttle product
+
+The products with 'Meteosens' include all individual meteorological
+variables such as SW_IN_1_1_1 and SW_IN_1_1_2. 'Meteo' has all
+redundant variables aggregated into one variable such as SW_IN.
+Products with 'Fluxnet' have all redundant variables aggregated and
+filled with ERA5 data such as SW_IN_F.
+
+One can use the quality flag for aggregated variables. ``icos_qc`` is
+the maximum quality flag used. That means ``icos_qc = 2`` uses all
+data, and ``icos_qc = 0`` uses only the original, measured
+data. Filling of data gaps will then be done with ERA5(-Land) (see
+below).
+     
+A typical ICOS block would be:
+
+.. code-block:: python
+
+   [ICOS]
+   icos_product = ETC L2 Fluxes,ETC L2 Meteosens
+   icos_qc = 0
+
+The 'ETC L2 Fluxes' product would be included because it contains the
+CO<sub>2</sub> concentrations. Only the original, measured data would
+be used and gaps filled with ERA5(-Land). Or:
+
+.. code-block:: python
+
+   [ICOS]
+   icos_product = Fluxnet Product
+   icos_qc = 2
+
+would use the long timeseries with variables filled by the ICOS
+ETC. One has to adapt the variables names to use depending on the
+chosen ICOS product. One can print available variables in a specific
+ICOS product with the script ``icos.py``:
+
+.. code-block:: bash
+
+   python icos.py -i -p 'ETC L2 Meteosens' FR-Hes
+
+prints all available variables in the product 'ETC L2 Meteosens' for
+the station FR-Hes. The data would be written into a local file
+without the -i option. See ``python icos.py -h`` for help.
+
+``icos_product`` can also be the name of a local file in an
+appropriate standard format, i.e. it can be read with ``df =
+pd.read_csv(file, index_col=0, parse_dates=True,
+date_format='ISO8601', na_values='-9999')``. In this case, the units
+must be part of the header row, e.g. SW_IN (W m-2). For example:
 
 .. code-block:: bash
 
    TIMESTAMP_END,CO2 (µmol mol-1),...
    2025-12-31 23:00:00,432.47,...
 
-Such a file can be produced, for example, using the function
-``write_icos`` in ``icos.py``.
-
-One can use the quality flag for aggregated variables. ``icos_qc`` is
-the maximum quality flag used. That means ``icos_qc = 2`` uses all
-data, and ``icos_qc = 0`` uses only the original, measured
-data. Filling of data gaps will then be done with ERA5(-Land) data
-(see below).
-
-For example:
-
-.. code-block:: python
-
-   [ICOS]
-   icos_product = L2
-   icos_meteo = Meteosens
-   icos_qc = 2
+Such a file is produced, for example, by the script ``icos.py``.
 
 
 Section [ERA5]

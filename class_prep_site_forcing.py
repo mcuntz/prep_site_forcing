@@ -294,6 +294,10 @@ class prepSiteForcing(object):
         # ICOS
         self.icos_product = ''
         self.icos_qc = 2
+        # FLUXNET
+        self.fluxnet_snapshot_dir = '.'
+        self.fluxnet_download_dir = '.'
+        self.fluxnet_qc = 2
         # ERA5
         self.era5type = 'era5-land-ts'
         self.era5path = '.'
@@ -483,6 +487,14 @@ class prepSiteForcing(object):
             self.icos_product = cfg['ICOS'].get('icos_product', '')
             self.icos_qc = str2int(cfg['ICOS'].get('icos_qc', ''), 2)
 
+        # Fluxnet
+        if cfg.has_section('FLUXNET'):
+            self.fluxnet_snapshot_dir = cfg['FLUXNET'].get(
+                'fluxnet_snapshot_dir', '.')
+            self.fluxnet_download_dir = cfg['FLUXNET'].get(
+                'fluxnet_download_dir', '.')
+            self.fluxnet_qc = str2int(cfg['FLUXNET'].get('fluxnet_qc', ''), 2)
+
         # ERA5
         if cfg.has_section('ERA5'):
             self.era5type = cfg['ERA5'].get('era5type', 'era5-land-ts')
@@ -577,20 +589,20 @@ class prepSiteForcing(object):
                 raise ValueError(f'Cannot find {a2n} to make netcdf'
                                  f' file for ecosystem model {self.ecomodel}.')
 
-        if self.input.lower() not in ['file', 'icos', 'era5']:
+        if self.input.lower() not in ['file', 'icos', 'fluxnet', 'era5']:
             raise ValueError('Input option no known.')
 
         if self.input.lower() == 'era5':
             if (self.startdate == '') or (self.enddate == ''):
                 raise ValueError(
                     'startdate and enddate must be given if no input file'
-                    ' nor ICOS data.')
+                    ' nor ICOS or Fluxnet data.')
             if self.imputation_method != 1:
                 warnings.warn('\ninput=ERA5 implies imputation_method=1.'
                               ' Setting imputation_method=1.')
                 self.imputation_method = 1
 
-        if self.input.lower() == 'icos':
+        if (self.input.lower() == 'icos') or (self.input.lower() == 'fluxnet'):
             self.ftimestep = 1.0
 
         if self.imputation_method > 1:
@@ -1395,6 +1407,193 @@ class prepSiteForcing(object):
 
         if len(df) == 0:
             warnings.warn(f'\nNo timesteps left from ICOS data'
+                          f' after selecting between startdate {startdate}'
+                          f' and enddate {enddate}. Available dates were'
+                          f' between {was_start} and {was_end}.')
+            df = self.make_empty_data(startdate=startdate,
+                                      enddate=enddate,
+                                      timestep=f'{dt}s')
+        else:
+            dtt = np.timedelta64(dt, 's')
+            if ((startdate < (df.index[0] - dtt)) or
+                (enddate > (df.index[-1] + dtt))):
+                if startdate < (df.index[0] - dtt):
+                    if (((df.index[0] - startdate) / dtt) % 1.) != 0.:
+                        warnings.warn(
+                            f'\nStartdate {startdate} does not fit to dates'
+                            f' in DataFrame: {df.index[0]}, {df.index[1]},'
+                            f' ...\nDo not extend DataFrame.')
+                    else:
+                        df1 = pd.DataFrame([[np.nan] * df.shape[1]],
+                                           index=[startdate],
+                                           columns=df.columns)
+                        df = pd.concat([df1, df])
+                if enddate > (df.index[-1] + dtt):
+                    if (((enddate - df.index[-1]) / dtt) % 1.) != 0.:
+                        warnings.warn(
+                            f'\nEnddate {enddate} does not fit to dates'
+                            f' in DataFrame: ..., {df.index[-2]},'
+                            f' {df.index[-1]}\nDo not extend DataFrame.')
+                    else:
+                        df1 = pd.DataFrame([[np.nan] * df.shape[1]],
+                                           index=[enddate],
+                                           columns=df.columns)
+                        df = pd.concat([df, df1])
+
+                df = df.resample(f'{dt}s', origin='start').asfreq(np.nan)
+
+        self.df = df
+
+        return df
+
+
+    def read_fluxnet_data(self, site='',
+                          snapshot_dir='', download_dir='',
+                          startdate=None, enddate=None):
+        """
+        Read data, get datetime, select columns, select time_span
+
+        Parameters
+        ----------
+        site : str, optional
+            Fluxnet site id (case-sensitive) (default: self.site_name)
+        snapshot_dir : str, optional
+            Directory with snapshot file. A new file will be downloaded
+            if no snapshot file is found of the current day
+            (default: self.fluxnet_snapshot_dir).
+        download_dir : str, optional
+            Directory for downloaded Fluxnet files.
+            (default: self.fluxnet_download_dir).
+        startdate : string, optional
+            First possible date in netcdf output file in ISO8601 format.
+            (Default: first date in input file)
+        enddate : string, optional
+            Last possible date in output netcdf file in ISO8601 format.
+            (Default: last date in input file)
+
+        Returns
+        -------
+        df : pandas.DataFrame
+           File read into pandas.DataFrame with datetime index
+
+        """
+        import fluxnet_shuttle as fs
+        from fluxnet import check_fluxnet_snapshot_today, read_fluxnet
+
+        if site == '':
+            site = self.site_name
+        if snapshot_dir == '':
+            snapshot_dir = self.fluxnet_snapshot_dir
+        if download_dir == '':
+            download_dir = self.fluxnet_download_dir
+        if startdate is None:
+            startdate = self.startdate
+        if enddate is None:
+            enddate = self.enddate
+
+        print(f'Read Fluxnet data for {site}')
+
+        snapshot = check_fluxnet_snapshot_today(snapshot_dir)
+        if snapshot == '':
+            snapshot = fs.listall(output_dir=snapshot_dir)
+
+        df, dfunit = read_fluxnet(site, snapshot,
+                                  download_dir=download_dir,
+                                  units=True)
+        in_columns = list(df.columns.copy())
+        wanted_columns = list(self.dnames.values())
+
+        # filter quality flags
+        if self.fluxnet_qc < 2:
+            print('Filter quality flags')
+            for cc in df.columns:
+                cc_qc = f'{cc}_QC'
+                if cc_qc in df.columns:
+                    mask = df[cc_qc] <= self.fluxnet_qc
+                    print(f'    {cc}: {df.shape[0] - mask.sum()}')
+                    df[cc] = df[cc].where(mask, other=np.nan)
+
+        # select variables
+        print('Aggregate variables')
+        dnames = self.dnames.copy()
+        ll = []
+        for dd in self.dnames:   # standard and extra vars
+            if self.dnames[dd]:
+                da = df.filter(regex=self.dnames[dd], axis=1)
+                dvars = list(da.columns)
+                if len(dvars) == 0:
+                    raise ValueError(f'No column found for {self.dnames[dd]}.\n'
+                                     f'Available columns are:\n'
+                                     f'{in_columns}')
+                vkeep = dvars[0]
+                dnames[dd] = vkeep
+                ll.append(vkeep)
+                if len(dvars) > 1:
+                    print(f'    {dd}: {dvars}')
+                    da = da.mean(axis=1)
+                    df[vkeep] = da
+                    vdel = dvars[1:]
+                    df = df.drop(columns=vdel)
+        if len(ll) == 0:
+            raise ValueError(f'No columns left after aggregation of variables.\n'
+                             f'Available columns were:\n'
+                             f'{in_columns}\n'
+                             f'Variables demanded were:\n'
+                             f'{wanted_columns}')
+        df = df[ll]
+        self.dnames = dnames
+
+        # fill standard vars with alternative vars
+        for dd in self.anames:
+            aa = self.anames[dd]     # alternative var
+            if aa:
+                da = df.filter(regex=aa, axis=1).mean(axis=1)
+                vv = self.dnames[dd] # standard var
+                df[vv] = df[vv].where(df[vv].notna(), other=da)
+
+        # select variables
+        ll = []
+        for dd in self.dnames:   # standard and extra vars
+            if self.dnames[dd]:
+                ll.append(self.dnames[dd])
+        if len(ll) == 0:
+            raise ValueError(f'No columns left after selection of variables.\n'
+                             f'Available columns were:\n'
+                             f'{in_columns}\n'
+                             f'Variables demanded were:\n'
+                             f'{wanted_columns}')
+        df = df[ll]
+
+        # rename vars to standard names,
+        # making non-existent variables
+        for dd in self.dnames:
+            if self.dnames[dd]:
+                df.rename(columns={self.dnames[dd]: dd}, inplace=True)
+            else:
+                df[dd] = np.nan
+
+        # update unit dictionary
+        for dd in self.dnames:   # standard and extra vars
+            if self.dnames[dd]:
+                self.dunits.update({dd: dfunit[self.dnames[dd]]})
+
+        # start and end dates
+        if startdate == '':
+            startdate = df.index[0]
+        else:
+            startdate = pd.to_datetime(startdate, format='ISO8601')
+        if enddate == '':
+            enddate = df.index[-1]
+        else:
+            enddate = pd.to_datetime(enddate, format='ISO8601')
+
+        dt = self.get_timestep_seconds(df=df)
+        was_start = df.index[0]
+        was_end = df.index[-1]
+        df = df[(df.index >= startdate) & (df.index <= enddate)]
+
+        if len(df) == 0:
+            warnings.warn(f'\nNo timesteps left from Fluxnet data'
                           f' after selecting between startdate {startdate}'
                           f' and enddate {enddate}. Available dates were'
                           f' between {was_start} and {was_end}.')

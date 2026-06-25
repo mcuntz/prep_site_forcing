@@ -23,6 +23,7 @@ Sections of the README are:
      - `Section [Input]`_
      - `Section [Output]`_
      - `Section [ICOS]`_
+     - `Section [FLUXNET]`_
      - `Section [ERA5]`_
      - `Section [CO2]`_
      - `Section [VarNames]`_
@@ -90,6 +91,7 @@ as well as
    * cdsapi_ if ERA5 must be downloaded; needs a Copernicus account
      (see `Section [ERA5]`_)
    * `icoscp_core`_  if ICOS data is used (see `Section [ICOS]`_)
+   * `Fluxnet Shuttle`_  if Fluxnet data is used (see `Section [FLUXNET]`_)
 
 
 Config file
@@ -402,6 +404,51 @@ m-2). For example:
 Such a file is produced, for example, by the script ``icos.py``.
 
 
+Section [FLUXNET]
+^^^^^^^^^^^^^^^^^
+
+Input can also come directly from the Fluxnet Shuttle
+(``input = Fluxnet``) using the ``[Site].name`` as station id. One has
+to have the Python library of the `Fluxnet Shuttle`_ installed:
+
+.. code-block:: bash
+
+   python -m pip install git+https://github.com/fluxnet/shuttle.git
+
+The Fluxnet Shuttle works with a _snapshot_ file, which gives
+information about all available sites. A current snapshot file of the
+current date will be searched in the ``fluxnet_snapshot_dir``. A new
+snapshot will be downloaded if no snapshot file of the current day is
+found. Data files are searched in ``fluxnet_download_dir``.
+ 
+Just as for ICOS, one can use the quality flags. ``fluxnet_qc`` is the
+maximum quality flag used. That means ``fluxnet_qc = 2`` uses all
+data, and ``fluxnet_qc = 0`` uses only the original, measured
+data. Filling of data gaps will then be done with ERA5(-Land) (see
+below).
+     
+A typical ICOS block would be:
+
+.. code-block:: python
+
+   [FLUXNET]
+   fluxnet_snapshot_dir = fluxnet
+   fluxnet_download_dir = fluxnet
+   fluxnet_qc = 0
+
+One has to adapt the variable names to use (`Section
+[VarNames]`_). One can print available variables at the Fluxnet site
+with the script ``fluxnet.py``, for example:
+
+.. code-block:: bash
+
+   python fluxnet.py -s fluxnet -d fluxnet -v FR-Hes
+
+prints all available variables (-v) for the station FR-Hes using
+_fluxnet_ as the snapshot (-s) and data (-d) directory.
+
+
+
 Section [ERA5]
 ^^^^^^^^^^^^^^
 
@@ -689,6 +736,7 @@ Copyright (c) 2026- Matthias Cuntz
 .. _xarray: https://xarray.dev/
 .. _cdsapi: https://cds.climate.copernicus.eu/how-to-api
 .. _icoscp_core: https://github.com/ICOS-Carbon-Portal/data/tree/master/src/main/python/icoscp_core
+.. _Fluxnet Shuttle: https://github.com/fluxnet/shuttle
 .. _pandas.read_csv: https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
 .. _pandas timeseries: https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
 .. _how-to-api: https://cds.climate.copernicus.eu/how-to-api

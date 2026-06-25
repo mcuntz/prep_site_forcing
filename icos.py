@@ -411,7 +411,6 @@ if __name__ == '__main__':
 
     import argparse
     import os
-    import sys
 
     info = False
     output = ''

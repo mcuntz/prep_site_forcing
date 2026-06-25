@@ -86,6 +86,9 @@ if __name__ == '__main__':
     elif prep.input.lower() == 'icos':
         df = prep.read_icos_data(product=prep.icos_product)
         df = prep.convert_units(df)
+    elif prep.input.lower() == 'fluxnet':
+        df = prep.read_fluxnet_data()
+        df = prep.convert_units(df)
     elif prep.input.lower() == 'file':
         df = prep.read_csv_data(prep.infile)
         df = prep.convert_units(df)

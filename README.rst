@@ -37,9 +37,9 @@ About
 The scripts of ``prep_site_forcing`` take input data, gap-fill it, and
 produce files in the format and units suitable to run specific
 ecosystem models. They can take data from ascii input files, download
-data from the ICOS carbon portal, or can use ERA5 and ERA5-Land
-data. Data can be imputed (gap-filled) by linear interpolation or
-using bias-corrected ERA5(-Land) data.
+data from the ICOS carbon portal, the Fluxnet Shuttle, or can use ERA5
+and ERA5-Land data. Data can be imputed (gap-filled) by linear
+interpolation or using bias-corrected ERA5(-Land) data.
 
 The script reads information and options from a configuration file,
 then reads the input data and produces a csv file with imputed
@@ -60,7 +60,8 @@ There is no installation. Simply clone the repository:
 
    git clone https://github.com/mcuntz/prep_site_forcing.git
 
-and run the script (once you have accounts and setup ICOS and ERA5):
+and run the script (once you have accounts and setup ICOS, Fluxnet,
+and ERA5):
 
 .. code-block:: bash
 
@@ -131,13 +132,16 @@ Section [Options]
 There are several general options.
 
 ``input`` tells, which data should be taken. It can be ``file``,
-``ICOS``, or ``ERA5``. If it is ``file``, the section ``[Input]`` will
-be used and data will be read from a local file. If ``input`` is set
-to ``ICOS``, the section ``[ICOS]`` will be used and data is
-downloaded from the ICOS Carbon Portal or read from a local file in
-ICOS convention. If ``input`` is ``ERA5``, the section ``ERA5`` will
-be used and data will be downloaded from the Copernicus archive or
-read from local files, and this data will be used directly as forcing
+``ICOS``, ``FLUXNET``, or ``ERA5``. If it is ``file``, the section
+``[Input]`` will be used and data will be read from a local file. If
+``input`` is set to ``ICOS``, the section ``[ICOS]`` will be used and
+data is downloaded from the ICOS Carbon Portal or read from a local
+file in ICOS convention. If ``input`` is set to ``FLUXNET``, the
+section ``[FLUXNET]`` will be used and data is downloaded via the
+Fluxnet Shuttle, which might run out to be the ICOS Carbon Portal for
+European sites. If ``input`` is ``ERA5``, the section ``ERA5`` will be
+used and data will be downloaded from the Copernicus archive or read
+from local files, and this data will be used directly as forcing
 data. There is no default value.
 
 A Mean Absolute Deviation (MAD) filter can be applied to the input
@@ -180,13 +184,13 @@ Section [Site]
 
 Data in the section ``[Site]`` is mostly used to write the information
 into the netcdf file. The site ``name`` is basically for information
-but it is also used as site id for ICOS stations. ``latitude`` and
-``longitude`` are also used to download or extract ERA5(-Land)
-data. ``latitude`` is from -90 to 90 and ``longitude`` is from -180
-to 180. Units of ``altitude`` and ``reference_height`` are meter
-(m). ``reference_height`` is the height where temperature and humidity
-were measured. There are no defaults except ``altitude = 0`` and
-``reference_height = 2``.
+but it is also used as site id for ICOS and Fluxnet
+stations. ``latitude`` and ``longitude`` are also used to download or
+extract ERA5(-Land) data. ``latitude`` is from -90 to 90 and
+``longitude`` is from -180 to 180. Units of ``altitude`` and
+``reference_height`` are meter (m). ``reference_height`` is the height
+where temperature and humidity were measured. There are no defaults
+except ``altitude = 0`` and ``reference_height = 2``.
 
 For example:
 
@@ -296,9 +300,9 @@ format (e.g. 1994-12-31 23:30) to restrict the forcing file between
 the two dates. Defaults are the first and last dates of the input file
 or input stream. ``startdate``, ``enddate``, and ``timestep`` have to
 be given if ``input`` is ``ERA5``. In this cases, ``timestep`` will be
-the time step of the output file (by linear interpolation from (half-)hourly
-ICOS or ERA5(-Land) data). Notation such as 1800s or 30min can be used
-(`pandas timeseries`_).
+the time step of the output file (by linear interpolation from
+(half-)hourly ICOS, Fluxnet, or ERA5(-Land) data). Notation such as
+1800s or 30min can be used (`pandas timeseries`_).
 
 For example:
 
@@ -415,7 +419,7 @@ to have the Python library of the `Fluxnet Shuttle`_ installed:
 
    python -m pip install git+https://github.com/fluxnet/shuttle.git
 
-The Fluxnet Shuttle works with a _snapshot_ file, which gives
+The Fluxnet Shuttle works with a *snapshot* file, which gives
 information about all available sites. A current snapshot file of the
 current date will be searched in the ``fluxnet_snapshot_dir``. A new
 snapshot will be downloaded if no snapshot file of the current day is
@@ -427,7 +431,7 @@ data, and ``fluxnet_qc = 0`` uses only the original, measured
 data. Filling of data gaps will then be done with ERA5(-Land) (see
 below).
      
-A typical ICOS block would be:
+A typical FLUXNET block would be:
 
 .. code-block:: python
 
@@ -445,7 +449,7 @@ with the script ``fluxnet.py``, for example:
    python fluxnet.py -s fluxnet -d fluxnet -v FR-Hes
 
 prints all available variables (-v) for the station FR-Hes using
-_fluxnet_ as the snapshot (-s) and data (-d) directory.
+*fluxnet* as the snapshot (-s) and data (-d) directory.
 
 
 
@@ -710,9 +714,9 @@ For example:
    unit_rainf = mm
    unit_snowf = mm
 
-``[VarUnits]`` is ignored in case ``input`` is ``ICOS`` or ``ERA5``. If the
-``icos_product`` is a local file, then the units must be in the header
-row (see section ``[ICOS]``).
+``[VarUnits]`` is ignored in case ``input`` is ``ICOS``, ``FLUXNET``,
+or ``ERA5``. If the ``icos_product`` is a local file, then the units
+must be in the header row (see section ``[ICOS]``).
 
 
 License

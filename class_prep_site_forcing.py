@@ -1176,8 +1176,8 @@ class prepSiteForcing(object):
                 eair = e_air_sat(tk) - vpd
                 idf['qair'] = q_air_eair(eair, p)
             else:
-                eair = pj.vpd2eair(vpd, tk)
-                idf['qair'] = pj.eair2shair(eair, p)
+                eair = pj.vpd2eair(vpd, tk, undef=np.nan)
+                idf['qair'] = pj.eair2shair(eair, p, undef=np.nan)
 
         if rhair2qair:  # rhair2shair
             rh = idf['qair']     # 0-1
@@ -1190,8 +1190,8 @@ class prepSiteForcing(object):
                 eair = rh * e_air_sat(tk)
                 idf['qair'] = q_air_eair(eair, p)
             else:
-                eair = rh * pj.esat(tk)
-                idf['qair'] = pj.eair2shair(eair, p)
+                eair = rh * pj.esat(tk, undef=np.nan)
+                idf['qair'] = pj.eair2shair(eair, p, undef=np.nan)
 
         if not isinstance(df, str):
             return idf
@@ -1763,8 +1763,8 @@ class prepSiteForcing(object):
         isoform = '%Y-%m-%d'
         date = tmin.strftime(isoform) + '/' + tmax.strftime(isoform)
 
-        print(f'Calling get_era5.py -a {area} -d {date},'
-              f' -p {self.era5path} -r {self.era5type}')
+        print(f'Calling get_era5.py -d {date} -p {self.era5path}'
+              f' -r {self.era5type} {area}')
         era5files = get_era5(area=area, date=date,
                              path=self.era5path,
                              reanalysis_model=self.era5type)

@@ -1193,6 +1193,14 @@ class prepSiteForcing(object):
                 eair = rh * pj.esat(tk, undef=np.nan)
                 idf['qair'] = pj.eair2shair(eair, p, undef=np.nan)
 
+        # copy units of extra vars to varunits dict
+        for dd in self.dnames:
+            if dd in self.dvarunits:
+                if (self.dvarunits[dd] == '') and (self.dunits[dd] != ''):
+                    self.dvarunits[dd] = self.dunits[dd]
+            else:
+                self.dvarunits[dd] = self.dunits[dd]
+
         if not isinstance(df, str):
             return idf
         else:
@@ -2751,12 +2759,10 @@ class prepSiteForcing(object):
         if len(ocol) > 0:
             idf.rename(columns=ocol, inplace=True)
 
-        if isinstance(self.na_values, Iterable):
-            undef = self.na_values[0]
-        elif np.isnan(self.na_values) or (self.na_values is None):
-            undef = 'NaN'
+        if self.fill_value:
+            undef = self.fill_value
         else:
-            undef = self.na_values
+            undef = 'NaN'
 
         # write file
         with tempfile.NamedTemporaryFile(mode='w', delete=False) as ff:
@@ -2818,9 +2824,9 @@ class prepSiteForcing(object):
         aopt = (f'-o {self.outputfile}'
                 f' -t {self.ftimestep}')
         if self.enddate:
-            aopt += f' -e {self.enddate}'
+            aopt += f' -e "{self.enddate}"'
         if self.startdate:
-            aopt += f' -s {self.startdate}'
+            aopt += f' -s "{self.startdate}"'
         if self.fill_value:
             aopt += f' -f {self.fill_value}'
         if self.verbose:

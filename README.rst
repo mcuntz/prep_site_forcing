@@ -254,17 +254,19 @@ from ``inputfile`` using `pandas.read_csv`_. The options ``sep``,
 ``header``, ``index_col``, ``usecols``, ``skiprows``, ``na_values``,
 ``parse_dates``, and ``date_format`` are implemented, which allows to
 read a vast majority of data files. Please see the documentation of
-`pandas.read_csv`_ for details. There are also some example in the
+`pandas.read_csv`_ for details. There are also some examples in the
 README_ of dfvue_. All `pandas.read_csv`_ options have the default
-pandas value except ``parse_dates`` that is set to True by default.
+pandas value except ``parse_dates`` that is set to *True* by default.
 
 ``ftimestep`` indicates which time point is represented by the time
 information in the input file. ``0`` means that the times represent
 the beginning of the time steps, ``0.5`` the middle, and ``1`` the end
-of the time steps. MuSICA, for example, is using the middle of the
-time step and ISBA is using the end of the time step in their forcing
-files. Time steps will hence be shifted appropriately in the
-``ascii2netcdf`` routines (not in the csv file).
+of the time steps. A data logger might record the time, measuring and
+averaging half an hour of data and then write the start time and the
+data into a file. This would mean that ``ftimestep = 0``. Or a data
+logger might measure and average half an hour of data and then write
+the current time and the average data into a file. This would mean
+that ``ftimestep = 1``.
 
 For example:
 

@@ -206,17 +206,17 @@ class ascii2Netcdf(object):
         ivars = list()
         iunits = list()
         for ic in range(ncol):
-            if ' ' in arr[ic]:
-                iv, iu = arr[ic].split()
-                ivars.append(iv.strip())
-                iu = iu.strip()
+            vv = arr[ic]
+            if ' ' in vv:
+                ivars.append(vv[:vv.find(' ')])
+                iu = vv[vv.find(' '):].strip()
                 if iu.startswith('(') or iu.startswith('['):
                     iu = iu[1:]
                 if iu.endswith(')') or iu.endswith(']'):
                     iu = iu[:-1]
-                    iunits.append(iu.strip())
+                iunits.append(iu.strip())
             else:
-                ivars.append(arr[ic].strip())
+                ivars.append(vv.strip())
                 iunits.append('')
 
         return ivars, iunits

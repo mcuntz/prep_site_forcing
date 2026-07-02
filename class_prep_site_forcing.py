@@ -2684,7 +2684,7 @@ class prepSiteForcing(object):
                   'snowf': [0, 200],
                   'h_sbl': [0, 2000]}
         for vv in df.columns:
-            if df[vv].any():
+            if df[vv].any() and (vv in minmax):
                 imm = minmax[vv]
                 if ((df[vv].min() < imm[0]) or
                     (df[vv].max() > imm[1])):

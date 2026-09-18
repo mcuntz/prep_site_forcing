@@ -22,6 +22,7 @@ History
      Matthias Cuntz, Jun 2026
    * Return units as dictionary, Matthias Cuntz, Jun 2026
    * Concat columns and rows (datetime), Matthias Cuntz, Jun 2026
+   * Cache meta.list_datatypes(), Matthias Cuntz, Sep 2026
 
 '''
 import os
@@ -137,8 +138,9 @@ def info_icos(station='', product=''):
 
     istation = [ ee for ee in eco_stations if ee.id == station ][0]
     i_have_product = []
+    list_datatypes = meta.list_datatypes()
     for pp in known_products:
-        dtype = [ dd for dd in meta.list_datatypes() if dd.label == pp ][0]
+        dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
         # meta.list_data_objects is empty is dtype does not exist
         i_have_product.append(len(
             meta.list_data_objects(dtype, station=istation)))
@@ -166,7 +168,7 @@ def info_icos(station='', product=''):
 
         dobj_metas = []
         for pp in products:
-            dtype = [ dd for dd in meta.list_datatypes()
+            dtype = [ dd for dd in list_datatypes
                       if dd.label == pp ][0]
             srelease = meta.list_data_objects(dtype, station=istation)[0]
 
@@ -258,8 +260,9 @@ def read_icos(station, product='ETC L2 Meteosens',
 
     # available products for station
     i_have_product = []
+    list_datatypes = meta.list_datatypes()
     for pp in known_products:
-        dtype = [ dd for dd in meta.list_datatypes() if dd.label == pp ][0]
+        dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
         # meta.list_data_objects is empty is dtype does not exist
         i_have_product.append(len(
             meta.list_data_objects(dtype, station=istation)))
@@ -283,8 +286,7 @@ def read_icos(station, product='ETC L2 Meteosens',
     df = []
     unit = []
     for pp in products:
-        dtype = [ dd for dd in meta.list_datatypes() if dd.label == pp ]
-        dtype = dtype[0]
+        dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
 
         srelease = meta.list_data_objects(dtype, station=istation)[0]
         dobj_meta = meta.get_dobj_meta(srelease.uri)
@@ -477,8 +479,9 @@ if __name__ == '__main__':
         else:
             istation = [ ee for ee in eco_stations if ee.id == station ][0]
             i_have_product = []
+            list_datatypes = meta.list_datatypes()
             for pp in known_products:
-                dtype = [ dd for dd in meta.list_datatypes() if dd.label == pp ][0]
+                dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
                 # meta.list_data_objects is empty is dtype does not exist
                 i_have_product.append(len(
                     meta.list_data_objects(dtype, station=istation)))

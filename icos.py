@@ -23,6 +23,7 @@ History
    * Return units as dictionary, Matthias Cuntz, Jun 2026
    * Concat columns and rows (datetime), Matthias Cuntz, Jun 2026
    * Cache meta.list_datatypes(), Matthias Cuntz, Sep 2026
+   * Limit sparql queries, i.e. use of meta, Matthias Cuntz, Sep 2026
 
 '''
 import os
@@ -88,7 +89,7 @@ known_products = ['ETC L2 Fluxes', 'ETC L2 Fluxnet (half-hourly)',
                   'Fluxnet Product']
 
 
-def info_icos(station='', product=''):
+def info_icos(station='', product='', product_data_objects={}):
     '''
     Info on available ICOS products of ecosystem stations
 
@@ -110,6 +111,9 @@ def info_icos(station='', product=''):
             'Fluxnet Product' : Fluxnet Shuttle product for station
 
         `product` can be comma-separated list of ICOS-CP data products.
+    product_data_objects : dict, optional
+        Dictionary with data objects for each available product at station.
+        Can be passed if Carbon Portal was queried already to limit sparql queries.
 
     Returns
     -------
@@ -136,16 +140,19 @@ def info_icos(station='', product=''):
                          f' Known ecosystem stations:\n'
                          f'{eco_stations_ids}')
 
-    istation = [ ee for ee in eco_stations if ee.id == station ][0]
-    i_have_product = []
-    list_datatypes = meta.list_datatypes()
-    for pp in known_products:
-        dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
-        # meta.list_data_objects is empty is dtype does not exist
-        i_have_product.append(len(
-            meta.list_data_objects(dtype, station=istation)))
-    products_avail = [ known_products[i] for i in range(len(known_products))
-                       if i_have_product[i] != 0 ]
+    if len(product_data_objects) == 0:
+        istation = [ ee for ee in eco_stations if ee.id == station ][0]
+        list_datatypes = meta.list_datatypes()
+        pdict = {}
+        for pp in known_products:
+            dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
+            # meta.list_data_objects is empty is dtype does not exist
+            dobj = meta.list_data_objects(dtype, station=istation)
+            if len(dobj) > 0:
+                pdict.update({pp: dobj})
+    else:
+        pdict = product_data_objects
+    products_avail = pdict.keys()
     products_avail = sorted(set(products_avail))
     lproducts_avail = [ pp.lower() for pp in products_avail ]
 
@@ -168,10 +175,7 @@ def info_icos(station='', product=''):
 
         dobj_metas = []
         for pp in products:
-            dtype = [ dd for dd in list_datatypes
-                      if dd.label == pp ][0]
-            srelease = meta.list_data_objects(dtype, station=istation)[0]
-
+            srelease = pdict[pp][0]
             dobj_meta = meta.get_dobj_meta(srelease.uri)
             sdata = data.get_columns_as_arrays(dobj_meta, length=1)
             idf = pd.DataFrame(sdata)
@@ -193,7 +197,8 @@ def info_icos(station='', product=''):
 
 
 def read_icos(station, product='ETC L2 Meteosens',
-              units=False, concat=False):
+              units=False, concat=False,
+              product_data_objects={}):
     '''
     List of pandas DataFrame of ICOS-CP data
 
@@ -227,6 +232,9 @@ def read_icos(station, product='ETC L2 Meteosens',
     concat : bool, optional
         Concat different data streams into one pandas.DataFrame if True
         (default: False)
+    product_data_objects : dict, optional
+        Dictionary with data objects for each available product at station.
+        Can be passed if Carbon Portal was queried already to limit sparql queries.
 
     Returns
     -------
@@ -254,20 +262,21 @@ def read_icos(station, product='ETC L2 Meteosens',
                          f' Known ecosystem stations:\n'
                          f'{eco_stations_ids}')
 
-    # station
-    istation = [ ss for ss in eco_stations if ss.id == station ][0]
-    # smeta = meta.get_station_meta(istation)
-
-    # available products for station
-    i_have_product = []
-    list_datatypes = meta.list_datatypes()
-    for pp in known_products:
-        dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
-        # meta.list_data_objects is empty is dtype does not exist
-        i_have_product.append(len(
-            meta.list_data_objects(dtype, station=istation)))
-    products_avail = [ known_products[i] for i in range(len(known_products))
-                       if i_have_product[i] != 0 ]
+    if len(product_data_objects) == 0:
+        # station
+        istation = [ ee for ee in eco_stations if ee.id == station ][0]
+        # available products for station
+        list_datatypes = meta.list_datatypes()
+        pdict = {}
+        for pp in known_products:
+            dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
+            # meta.list_data_objects is empty is dtype does not exist
+            dobj = meta.list_data_objects(dtype, station=istation)
+            if len(dobj) > 0:
+                pdict.update({pp: dobj})
+    else:
+        pdict = product_data_objects
+    products_avail = pdict.keys()
     products_avail = sorted(set(products_avail))
     lproducts_avail = [ pp.lower() for pp in products_avail ]
 
@@ -286,9 +295,7 @@ def read_icos(station, product='ETC L2 Meteosens',
     df = []
     unit = []
     for pp in products:
-        dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
-
-        srelease = meta.list_data_objects(dtype, station=istation)[0]
+        srelease = pdict[pp][0]
         dobj_meta = meta.get_dobj_meta(srelease.uri)
         sdata = data.get_columns_as_arrays(dobj_meta)
 
@@ -353,7 +360,8 @@ def read_icos(station, product='ETC L2 Meteosens',
 
 
 def write_icos(station, outfile, product='ETC L2 Meteosens',
-               undef=-9999., verbose=False):
+               undef=-9999., verbose=False,
+               product_data_objects={}):
     '''
     Write ICOS-CP data to file
 
@@ -382,6 +390,10 @@ def write_icos(station, outfile, product='ETC L2 Meteosens',
         (default: -9999.)
     verbose : bool, optional
         Report progress if True
+    product_data_objects : dict, optional
+        Dictionary with data objects for each available product at station
+        passed to read_icos.
+        Can be passed if Carbon Portal was queried already to limit sparql queries.
 
     Returns
     -------
@@ -391,7 +403,8 @@ def write_icos(station, outfile, product='ETC L2 Meteosens',
     # read icos data
     if verbose:
         print(f'  Get ICOS product "{product}" for station "{station}".')
-    df, dfunit = read_icos(station, product=product, units=True, concat=True)
+    df, dfunit = read_icos(station, product=product, units=True, concat=True,
+                           product_data_objects=product_data_objects)
 
     # include units in column names
     ocol = {}
@@ -477,16 +490,18 @@ if __name__ == '__main__':
                   f' Known ecosystem stations:\n'
                   f'{eco_stations_ids}')
         else:
+            # station
             istation = [ ee for ee in eco_stations if ee.id == station ][0]
-            i_have_product = []
+            # available products for station
             list_datatypes = meta.list_datatypes()
+            pdict = {}
             for pp in known_products:
                 dtype = [ dd for dd in list_datatypes if dd.label == pp ][0]
                 # meta.list_data_objects is empty is dtype does not exist
-                i_have_product.append(len(
-                    meta.list_data_objects(dtype, station=istation)))
-            products_avail = [ known_products[i] for i in range(len(known_products))
-                               if i_have_product[i] != 0 ]
+                dobj = meta.list_data_objects(dtype, station=istation)
+                if len(dobj) > 0:
+                    pdict.update({pp: dobj})
+            products_avail = pdict.keys()
             products_avail = sorted(set(products_avail))
             lproducts_avail = [ pp.lower() for pp in products_avail ]
 
@@ -504,7 +519,8 @@ if __name__ == '__main__':
 
             if allgood:
                 if info:
-                    info_icos(station=station, product=product)
+                    info_icos(station=station, product=product,
+                              product_data_objects=pdict)
                 else:
                     if output == '':
                         output = (
@@ -514,6 +530,7 @@ if __name__ == '__main__':
                     print(f'Write {output} for product "{product}"'
                           f' at {station}')
                     write_icos(station, output, product=product,
-                               undef=-9999., verbose=False)
+                               undef=-9999., verbose=False,
+                               product_data_objects=pdict)
             else:
-                info_icos(station=station, product='')
+                info_icos(station=station, product='', product_data_objects=pdict)

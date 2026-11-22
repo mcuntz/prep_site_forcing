@@ -50,7 +50,8 @@ data. The script then calls a model specific version of
 for the ecosystem model in the very model-specific form. Currently
 there are the three model-specific scripts ``ascii2isba.py``,
 ``ascii2musica.py``, and ``ascii2orchidee.py`` extending the base
-class ``ascii2Netcdf`` from ``class_ascii2netcdf.py``. See how to add a new vegetation model here_.
+class ``ascii2Netcdf`` from ``class_ascii2netcdf.py``. See how to add
+a new vegetation model here_.
 
 
 Installation

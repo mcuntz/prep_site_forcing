@@ -162,11 +162,11 @@ The ``__init__`` method should now look like this:
 Then we change the method ``output_variables`` for the correct names and
 units:
 
-* Change `CO2air` to `CO2_f` in ``self.co2air``.
-* Change `Near surface CO2 concentration` to `CO2 mole fraction`,
-  `Near surface northerly wind speed` to `Near surface northward
-  wind component`, and `Near surface easterly wind speed` to `Near
-  surface eastward wind component` in ``self.varlongnames``.
+* Change *CO2air* to *CO2_f* in ``self.co2air``.
+* Change *Near surface CO2 concentration* to *CO2 mole fraction*,
+  *Near surface northerly wind speed* to *Near surface northward
+  wind component*, and *Near surface easterly wind speed* to *Near
+  surface eastward wind component* in ``self.varlongnames``.
 * We will not change the units to the non-standard units of ORCHIDEE.
      
 The ``output_variables`` method now looks like this:
@@ -225,7 +225,7 @@ The ``output_variables`` method now looks like this:
 
 The ``convert_units_orchidee`` does already exactly what we want. It
 sets the correct output variable names, and deals with the wind
-components `Wind_N` and `Wind_E` if wind speed and wind direction are
+components *Wind_N* and *Wind_E* if wind speed and wind direction are
 given.
 
 .. code-block:: python
@@ -566,12 +566,12 @@ Basically, one has to specify the options for the call to
 ``class_prep_site_forcing.py`` and do not enhance the class via
 another class. You can search for 'isba' in the file to see the few
 places the specific model is used. There is only a check for
-`_FillValue` apart from the options in ``write_netcdf``.
+*_FillValue* apart from the options in ``write_netcdf``.
 
 We just copy the section ``if leco == 'musica':`` at the end of the if
 block and change it to ``elif leco == 'orchidee':``. In this block, we
-remove again the two lines with `altitude` and `self_altitude`, and
-remove `site_` from `longitude` and `latitude`. This gives the block:
+remove again the two lines with *altitude* and *self_altitude*, and
+remove *site_* from *longitude* and *latitude*. This gives the block:
 
 .. code-block:: python
 
@@ -587,7 +587,7 @@ remove `site_` from `longitude` and `latitude`. This gives the block:
                 f' --forcing_height {self.reference_height}')
        print(f'Calling python ascii2{leco}.py {aopt} {csvfile}')
 
-The `kwargs` are for the call to ``ascii2orchidee``. The `aopt` are only
+The *kwargs* are for the call to ``ascii2orchidee``. The *aopt* are only
 in the print. It prints the command line that one has type to make the same conversion of the ascii file to the netcdf file. This is practical, for example, if one wants impute long time series but later have shorter forcing files. Or one wants to add extra columns to the imputed ascii file after prep_site_forcing and run only the conversion ascii2netcdf again.
 
 

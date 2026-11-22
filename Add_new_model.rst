@@ -122,18 +122,18 @@ write the netcdf file.
 * In the file, replace all instances of *musica* by *orchidee* (I
   would follow the same uppercase/lowercase conventions as used in
   ``ascii2musica``).
-* One can delete all code that uses `site_altitude` and
-  `namelist`. That's in `__init__`, `ascii2orchidee`, the command
+* One can delete all code that uses *site_altitude* and
+  *namelist*. That's in ``__init__``, ``ascii2orchidee``, the command
   line options and the docstrings.
-* Replace all `site_` with nothing ``. That changes all
-  `site_latitude` to `latitude` and all `site_longitude` to
-  `longitude`.
+* Replace all *site_* with nothing ''. That changes all
+  *site_latitude* to *latitude* and all *site_longitude* to
+  *longitude*.
 * The timestep in ORCHIDEE seems to indicate the start of the
-  timestep. Change the two 0.5 in the block `if self.ftimestep !=
-  1.0:` in `write_netcdf` to 0.0. This will shift all model forcing
+  timestep. Change the two 0.5 in the block ``if self.ftimestep !=
+  1.0:`` in ``write_netcdf`` to 0.0. This will shift all model forcing
   time steps to the beginning of the timestep.
 
-The `__init__` method should now look like this:
+The ``__init__`` method should now look like this:
 
 .. code-block:: python
 
@@ -159,17 +159,17 @@ The `__init__` method should now look like this:
 
        return
 
-Then we change the method `output_variables` for the correct names and
+Then we change the method ``output_variables`` for the correct names and
 units:
 
-* Change `CO2air` to `CO2_f` in `self.co2air`.
+* Change `CO2air` to `CO2_f` in ``self.co2air``.
 * Change `Near surface CO2 concentration` to `CO2 mole fraction`,
   `Near surface northerly wind speed` to `Near surface northward
   wind component`, and `Near surface easterly wind speed` to `Near
-  surface eastward wind component` in `self.varlongnames`.
+  surface eastward wind component` in ``self.varlongnames``.
 * We will not change the units to the non-standard units of ORCHIDEE.
      
-The `output_variables` method now looks like this:
+The ``output_variables`` method now looks like this:
 
 .. code-block:: python
 
@@ -223,7 +223,7 @@ The `output_variables` method now looks like this:
                                          self.varlongnames))
        self.dict_stdnames = dict(zip(self.stdnames, self.varnames_lower))
 
-The `convert_units_orchidee` does already exactly what we want. It
+The ``convert_units_orchidee`` does already exactly what we want. It
 sets the correct output variable names, and deals with the wind
 components `Wind_N` and `Wind_E` if wind speed and wind direction are
 given.
@@ -316,7 +316,7 @@ given.
 
        return
 
-Last, we adapt the method `write_netcdf`. First we set and write the
+Last, we adapt the method ``write_netcdf``. First we set and write the
 dimensions:
 
 .. code-block:: python
@@ -421,7 +421,7 @@ UTZ if the option time2gmt is different to 0.
    for iv in self.df.columns:
        vloc[iv][:] = self.df[iv]
 
-The final `function`write_netcdf` method looks like this:
+The final ``write_netcdf`` method looks like this:
 
 .. code-block:: python
 
@@ -561,15 +561,15 @@ Enhance prepSiteForcing
 -----------------------
 
 Basically, one has to specify the options for the call to
-`ascii2orchidee` in the method `write_netcdf` in the class
-`prepSiteForcing`. That's pretty much all, so we write it just into
+``ascii2orchidee`` in the method ``write_netcdf`` in the class
+``prepSiteForcing``. That's pretty much all, so we write it just into
 ``class_prep_site_forcing.py`` and do not enhance the class via
 another class. You can search for 'isba' in the file to see the few
 places the specific model is used. There is only a check for
-`_FillValue`` apart from the options in `write_netcdf`.
+`_FillValue` apart from the options in ``write_netcdf``.
 
-We just copy the section `if leco == 'musica':` at the end of the if
-block and change it to `elif leco == 'orchidee':`. In this block, we
+We just copy the section ``if leco == 'musica':`` at the end of the if
+block and change it to ``elif leco == 'orchidee':``. In this block, we
 remove again the two lines with `altitude` and `self_altitude`, and
 remove `site_` from `longitude` and `latitude`. This gives the block:
 
@@ -587,7 +587,7 @@ remove `site_` from `longitude` and `latitude`. This gives the block:
                 f' --forcing_height {self.reference_height}')
        print(f'Calling python ascii2{leco}.py {aopt} {csvfile}')
 
-The `kwargs` are for the call to `ascii2orchidee`. The `aopt` are only
+The `kwargs` are for the call to ``ascii2orchidee``. The `aopt` are only
 in the print. It prints the command line that one has type to make the same conversion of the ascii file to the netcdf file. This is practical, for example, if one wants impute long time series but later have shorter forcing files. Or one wants to add extra columns to the imputed ascii file after prep_site_forcing and run only the conversion ascii2netcdf again.
 
 
@@ -596,8 +596,8 @@ Adapt config file
 
 If you added a new variable or option for a new model, you can add it
 to the section [Model Options] of the config file. Do not forget to
-read it in the method `read_configfile` in the class
-`prepSiteForcing`. Here we just "recycled" the option time2gmt for
+read it in the method ``read_configfile`` in the class
+``prepSiteForcing``. Here we just "recycled" the option time2gmt for
 ORCHIDEE that was already present for MuSICA.
 
 

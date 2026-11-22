@@ -557,6 +557,7 @@ The final `function`write_netcdf` method looks like this:
 
        return
 
+
 Enhance prepSiteForcing
 -----------------------
 
@@ -589,6 +590,16 @@ remove `site_` from `longitude` and `latitude`. This gives the block:
 
 The `kwargs` are for the call to `ascii2orchidee`. The `aopt` are only
 in the print. It prints the command line that one has type to make the same conversion of the ascii file to the netcdf file. This is practical, for example, if one wants impute long time series but later have shorter forcing files. Or one wants to add extra columns to the imputed ascii file after prep_site_forcing and run only the conversion ascii2netcdf again.
+
+
+Adapt config file
+-----------------
+
+If you added a new variable or option for a new model, you can add it
+to the section [Model Options] of the config file. Do not forget to
+read it in the method `read_configfile` in the class
+`prepSiteForcing`. Here we just "recycled" the option time2gmt for
+ORCHIDEE that was already present for MuSICA.
 
 
 .. _ORCHIDEE: https://orchidee.ipsl.fr

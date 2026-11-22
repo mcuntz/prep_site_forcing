@@ -24,8 +24,8 @@ Steps are:
 Here we add the land surface model ORCHIDEE_ as an example.
 
 
-Make ascii2orchidee script
---------------------------
+Make ascii2netcdf script
+------------------------
 
 The netcdf forcing file for ORCHIDEE has the following structure: ::
 
@@ -117,21 +117,21 @@ We enhance the class ``ascii2Netcdf``. We have to set the name of the
 output variables, convert the variables to the correct units, and
 write the netcdf file.
 
-   1. We copy the file ``ascii2musica.py`` to ``ascii2orchidee.py`` for
-      a start.
-   2. In the file, replace all instances of *musica* by *orchidee* (I
-      would follow the same uppercase/lowercase conventions as used in
-      ``ascii2musica``).
-   3. One can delete all code that uses `site_altitude` and
-      `namelist`. That's in `__init__`, `ascii2orchidee`, the command
-      line options and the docstrings.
-   4. Replace all `site_` with nothing ``. That changes all
-      `site_latitude` to `latitude` and all `site_longitude` to
-      `longitude`.
-   5. The timestep in ORCHIDEE seems to indicate the start of the
-      timestep. Change the two 0.5 in the block `if self.ftimestep !=
-      1.0:` in `write_netcdf` to 0.0. This will shift all model forcing
-      time steps to the beginning of the timestep.
+* We copy the file ``ascii2musica.py`` to ``ascii2orchidee.py`` for
+  a start.
+* In the file, replace all instances of *musica* by *orchidee* (I
+  would follow the same uppercase/lowercase conventions as used in
+  ``ascii2musica``).
+* One can delete all code that uses `site_altitude` and
+  `namelist`. That's in `__init__`, `ascii2orchidee`, the command
+  line options and the docstrings.
+* Replace all `site_` with nothing ``. That changes all
+  `site_latitude` to `latitude` and all `site_longitude` to
+  `longitude`.
+* The timestep in ORCHIDEE seems to indicate the start of the
+  timestep. Change the two 0.5 in the block `if self.ftimestep !=
+  1.0:` in `write_netcdf` to 0.0. This will shift all model forcing
+  time steps to the beginning of the timestep.
 
 The `__init__` method should now look like this:
 

@@ -18,8 +18,7 @@ Sections of the README are:
      - `Section [Model]`_
      - `Section [Options]`_
      - `Section [Site]`_
-     - `Section [ISBA]`_
-     - `Section [MuSICA]`_
+     - `Section [Model Options]`_
      - `Section [Input]`_
      - `Section [Output]`_
      - `Section [ICOS]`_
@@ -29,6 +28,9 @@ Sections of the README are:
      - `Section [VarNames]`_
      - `Section [AlternativeVarNames]`_
      - `Section [VarUnits]`_
+
+   * `Adding a new model`_
+   * `License`_
 
 
 About
@@ -46,9 +48,9 @@ then reads the input data and produces a csv file with imputed
 data. The script then calls a model specific version of
 ``ascii2netcdf``, e.g. ``ascii2musica``, that produces forcing data
 for the ecosystem model in the very model-specific form. Currently
-there are the two model-specific scripts ``ascii2isba.py`` and
-``ascii2musica.py`` extending the base class ``ascii2Netcdf`` from
-``class_ascii2netcdf.py``.
+there are the three model-specific scripts ``ascii2isba.py``,
+``ascii2musica.py``, and ``ascii2orchidee.py`` extending the base
+class ``ascii2Netcdf`` from ``class_ascii2netcdf.py``. See how to add a new vegetation model here_.
 
 
 Installation
@@ -108,7 +110,7 @@ are ``[Model]``, ``[Site]``, and ``[VarNames]``. Further, the option
 ``input`` in ``[Options]`` must be set.
 
 See ``FR-Hes.cfg`` for an example that can be used as a template for
-other sites. The example files is highly commented and should be
+other sites. The example file is highly commented and should be
 rather self-explaining. Or see the explanations below.
 
 
@@ -204,44 +206,39 @@ For example:
    reference_height = 22.5
 
 
-Section [ISBA]
-^^^^^^^^^^^^^^
+Section [Model Options]
+^^^^^^^^^^^^^^^^^^^^^^^
 
-There a three options specific to the land surface model
-ISBA. ``reference_height_wind`` is the height where wind speed was
-measured (m). ``slope`` and ``aspect`` are the terrain slope and
-aspect in degrees. Defaults are that ``reference_height_wind`` is the
-same as ``reference_height``, as well as ``slope = 0`` and ``aspect =
-0``.
+Model specific options or information are given in the section
+``[Model Options]``. There a three options specific to the land
+surface model ISBA. ``reference_height_wind`` is the height where wind
+speed was measured (m). ``slope`` and ``aspect`` are the terrain slope
+and aspect in degrees. Defaults are that ``reference_height_wind`` is
+the same as ``reference_height``, as well as ``slope = 0`` and
+``aspect = 0``.
 
-For example:
+Both, the ecosystem model MuSICA and the land surface scheme ORCHIDEE
+use the option ``time2gmt``. It is the difference between local time
+and GMT (-12 to 12). The information will be passed to
+``ascii2musica``, which adds it to the attribute ``time_origin`` of
+the time variable of the netCDF file. In ORCHIDEE it shifts the times
+to UTZ if ``time2gmt`` is not 0. If it is 0, ORCHIDEE will use local
+time. Default is ``time2gmt = 0``.
 
-.. code-block:: python
-
-   [ISBA]
-   reference_height_wind = 22.5
-   slope =
-
-
-Section [MuSICA]
-^^^^^^^^^^^^^^^^
-
-There a two options specific to the ecosystem model
-MuSICA. ``time2gmt`` is the difference between local time and GMT (-12
-to 12). The information will be passed to ``ascii2musica``, which adds
-it to the attribute ``time_origin`` of the time variable of the netCDF
-file. If ``rsl_yoyo`` is True, then the boundary layer height of ERA5
-will be added to the output file(s). Note that the variable
+If ``rsl_yoyo`` is True for MuSICA, then the boundary layer height of
+ERA5 will be added to the output file(s). Note that the variable
 ``boundary_layer_height`` or ``h_sbl`` is not in ERA5-Land but only in
 ERA5. So forcing files for runs with the so-called 'yoyo' in MuSICA
-must use ERA5 data instead of ERA5-Land data. Defaults are
-``time2gmt = 0`` and ``rsl_yoyo = False``.
+must use ERA5 data instead of ERA5-Land data. Default is ``rsl_yoyo =
+False``.
 
 For example:
 
 .. code-block:: python
 
-   [MuSICA]
+   [Model Options]
+   reference_height_wind = 22.5
+   slope =
    time2gmt = 1
    rsl_yoyo = False
 
@@ -293,7 +290,7 @@ input file name with the suffix replaced by .nc if ``input = file``,
 or ``prep_site_forcing.nc`` otherwise. The name of the csv file is the
 name of the output file with the suffix replaced by .csv. ``fill_value``
 is the missing value used in the netCDF file, which is highly model
-specific. For example, MuSICA is using the netCDF default
+specific. For example, MuSICA and ORCHIDEE are using the netCDF default
 ``_FillValue`` (``fill_value =``), while ISBA is using
 ``fill_value = -9999999``.
 
@@ -721,6 +718,14 @@ or ``ERA5``. If the ``icos_product`` is a local file, then the units
 must be in the header row (see section ``[ICOS]``).
 
 
+Adding a new model
+------------------
+
+There is a guide how to add a new vegetation model here_. Preparation
+of forcing files uses the classes ``prepSiteForcing`` and
+``ascii2Netcdf``, which can both easily be enhanced.
+
+
 License
 -------
 
@@ -733,6 +738,7 @@ Copyright (c) 2026- Matthias Cuntz
 .. |License| image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
    :target: https://github.com/mcuntz/prep_site_forcing/blob/main/LICENSE
 .. _cftime: https://github.com/Unidata/cftime
+.. _here: Add_new_model.rst
 .. _matplotlib: https://matplotlib.org/
 .. _netCDF4: https://github.com/Unidata/netcdf4-python
 .. _numpy: https://numpy.org/

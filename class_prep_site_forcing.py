@@ -267,12 +267,14 @@ class prepSiteForcing(object):
         self.longitude = -9999.
         self.altitude = 0.
         self.reference_height = 2.
-        # ISBA
+        # Model Options
+        #   ISBA
         self.reference_height_wind = self.reference_height
         self.slope = 0.
         self.aspect = 0.
-        # MuSICA
+        #   MuSICA, ORCHIDEE
         self.time2gmt = 0.
+        #   MuSICA
         self.rsl_yoyo = False
         # Input
         self.infile = ''
@@ -402,7 +404,8 @@ class prepSiteForcing(object):
         sect = ['Model', 'Site', 'VarNames']
         for ss in sect:
             if not cfg.has_section(ss):
-                raise ValueError(f'Mandatory section "{ss}" missing in config file')
+                raise ValueError(f'Mandatory section "{ss}" missing in'
+                                 f' config file')
         odict = {'Options': 'input'}
         for ss in odict:
             if not cfg.has_option(ss, odict[ss]):
@@ -436,17 +439,20 @@ class prepSiteForcing(object):
         self.reference_height = str2float(cfg['Site'].get(
             'reference_height', ''), 2.)
 
-        # ISBA
-        if cfg.has_section('ISBA'):
-            self.reference_height_wind = str2float(cfg['ISBA'].get(
+        # Model Options
+        if cfg.has_section('Model Options'):
+            # ISBA
+            self.reference_height_wind = str2float(cfg['Model Options'].get(
                 'reference_height_wind', ''), self.reference_height)
-            self.slope = str2float(cfg['ISBA'].get('slope', ''), 0.)
-            self.aspect = str2float(cfg['ISBA'].get('aspect', ''), 0.)
-
+            self.slope = str2float(cfg['Model Options'].get('slope', ''), 0.)
+            self.aspect = str2float(cfg['Model Options'].get('aspect', ''), 0.)
+            # MuSICA, ORCHIDEE
+            self.time2gmt = str2float(
+                cfg['Model Options'].get('time2gmt', ''), 0.)
+            # MuSICA
+            self.rsl_yoyo = str2bool(
+                cfg['Model Options'].get('rsl_yoyo', ''), False)
         # MuSICA
-        if cfg.has_section('MuSICA'):
-            self.time2gmt = str2float(cfg['MuSICA'].get('time2gmt', ''), 0.)
-            self.rsl_yoyo = str2bool(cfg['MuSICA'].get('rsl_yoyo', ''), False)
         if self.rsl_yoyo:
             self.varnames.append('h_sbl')
             self.varunits.append('m')
@@ -457,11 +463,15 @@ class prepSiteForcing(object):
             self.infile = cfg['Input'].get('inputfile', '')
             self.sep = cfg['Input'].get('sep', None)
             self.header = parse_entry(cfg['Input'].get('header', 'infer'))
-            self.index_col = parse_entry(cfg['Input'].get('index_col', None), None)
+            self.index_col = parse_entry(cfg['Input'].get('index_col', None),
+                                         None)
             self.usecols = parse_entry(cfg['Input'].get('usecols', None), None)
-            self.skiprows = parse_entry(cfg['Input'].get('skiprows', None), None)
-            self.na_values = parse_entry(cfg['Input'].get('na_values', None), None)
-            self.parse_dates = str2bool(cfg['Input'].get('parse_dates', ''), True)
+            self.skiprows = parse_entry(cfg['Input'].get('skiprows', None),
+                                        None)
+            self.na_values = parse_entry(cfg['Input'].get('na_values', None),
+                                         None)
+            self.parse_dates = str2bool(cfg['Input'].get('parse_dates', ''),
+                                        True)
             self.date_format = cfg['Input'].get('date_format', 'ISO8601')
             self.ftimestep = str2float(cfg['Input'].get('ftimestep', ''), 1.0)
 
@@ -621,10 +631,10 @@ class prepSiteForcing(object):
                           f' for {self.ecomodel}. Taking era5-ts.')
             self.era5type = 'era5-ts'
 
-        if ((leco == 'musica') and (self.fill_value is not None)):
+        if ((leco in ['musica', 'orchidee']) and
+            (self.fill_value is not None)):
             warnings.warn(f'\nfill_value should be empty for {self.ecomodel}')
-
-        if leco == 'isba':
+        elif leco == 'isba':
             if self.fill_value is None:
                 self.fill_value = -9999999.
             elif self.fill_value != -9999999.:
@@ -934,7 +944,8 @@ class prepSiteForcing(object):
                 da = df.filter(regex=self.dnames[dd], axis=1)
                 dvars = list(da.columns)
                 if len(dvars) == 0:
-                    raise ValueError(f'No column found for {self.dnames[dd]}.\n'
+                    raise ValueError(f'No column found for'
+                                     f' {self.dnames[dd]}.\n'
                                      f'Available columns are:\n'
                                      f'{in_columns}')
                 vkeep = dvars[0]
@@ -947,7 +958,8 @@ class prepSiteForcing(object):
                     vdel = dvars[1:]
                     df = df.drop(columns=vdel)
         if len(ll) == 0:
-            raise ValueError(f'No columns left after aggregation of variables.\n'
+            raise ValueError(f'No columns left after aggregation of'
+                             f' variables.\n'
                              f'Available columns were:\n'
                              f'{in_columns}\n'
                              f'Variables demanded were:\n'
@@ -1343,7 +1355,8 @@ class prepSiteForcing(object):
                 da = df.filter(regex=self.dnames[dd], axis=1)
                 dvars = list(da.columns)
                 if len(dvars) == 0:
-                    raise ValueError(f'No column found for {self.dnames[dd]}.\n'
+                    raise ValueError(f'No column found for'
+                                     f' {self.dnames[dd]}.\n'
                                      f'Available columns are:\n'
                                      f'{in_columns}')
                 vkeep = dvars[0]
@@ -1356,7 +1369,8 @@ class prepSiteForcing(object):
                     vdel = dvars[1:]
                     df = df.drop(columns=vdel)
         if len(ll) == 0:
-            raise ValueError(f'No columns left after aggregation of variables.\n'
+            raise ValueError(f'No columns left after aggregation of'
+                             f' variables.\n'
                              f'Available columns were:\n'
                              f'{in_columns}\n'
                              f'Variables demanded were:\n'
@@ -1530,7 +1544,8 @@ class prepSiteForcing(object):
                 da = df.filter(regex=self.dnames[dd], axis=1)
                 dvars = list(da.columns)
                 if len(dvars) == 0:
-                    raise ValueError(f'No column found for {self.dnames[dd]}.\n'
+                    raise ValueError(f'No column found for'
+                                     f' {self.dnames[dd]}.\n'
                                      f'Available columns are:\n'
                                      f'{in_columns}')
                 vkeep = dvars[0]
@@ -1543,7 +1558,8 @@ class prepSiteForcing(object):
                     vdel = dvars[1:]
                     df = df.drop(columns=vdel)
         if len(ll) == 0:
-            raise ValueError(f'No columns left after aggregation of variables.\n'
+            raise ValueError(f'No columns left after aggregation of'
+                             f' variables.\n'
                              f'Available columns were:\n'
                              f'{in_columns}\n'
                              f'Variables demanded were:\n'
@@ -1662,7 +1678,6 @@ class prepSiteForcing(object):
            Input DataFrame with filtered data set to NaN
 
         """
-        import matplotlib.pyplot as plt
         if not isinstance(df, str):
             idf = df
         else:
@@ -1821,7 +1836,8 @@ class prepSiteForcing(object):
                     vlat = 'latitude'
                 else:
                     ids.close()
-                    raise ValueError("'latitude' dimension but no variable found")
+                    raise ValueError("'latitude' dimension but no variable"
+                                     " found")
             elif 'lat' in ids.dims:     # era5-land
                 if 'lat' in ids.variables:
                     vlat = 'lat'
@@ -1830,14 +1846,16 @@ class prepSiteForcing(object):
                     raise ValueError("'lat' dimension but no variable found")
             else:
                 ids.close()
-                raise ValueError("Neither 'lat' nor 'latitude' dimension found")
+                raise ValueError("Neither 'lat' nor 'latitude' dimension'"
+                                 " found")
 
             if 'longitude' in ids.dims:  # era5
                 if 'longitude' in ids.variables:
                     vlon = 'longitude'
                 else:
                     ids.close()
-                    raise ValueError("'longitude' dimension but no variable found")
+                    raise ValueError("'longitude' dimension but no variable"
+                                     " found")
             elif 'lon' in ids.dims:      # era5-land
                 if 'lon' in ids.variables:
                     vlon = 'lon'
@@ -1846,7 +1864,8 @@ class prepSiteForcing(object):
                     raise ValueError("'lon' dimension but no variable found")
             else:
                 ids.close()
-                raise ValueError("Neither 'lon' nor 'longitude' dimension found")
+                raise ValueError("Neither 'lon' nor 'longitude' dimension"
+                                 " found")
 
         else:
             try:
@@ -1905,7 +1924,8 @@ class prepSiteForcing(object):
                                      " found")
             else:
                 ids.close()
-                raise ValueError("Neither 'time' nor 'valid_time' dimension found")
+                raise ValueError("Neither 'time' nor 'valid_time' dimension"
+                                 " found")
 
         else:
             try:
@@ -2316,7 +2336,8 @@ class prepSiteForcing(object):
         return out, pdict
 
 
-    def fill_data(self, df='', imputation_method=None, outtype='', plotname=''):
+    def fill_data(self, df='', imputation_method=None, outtype='',
+                  plotname=''):
         """
         Fill missing data
 
@@ -2457,7 +2478,8 @@ class prepSiteForcing(object):
                             vtime = self.get_era5_time_name(evar)
                             ivar = np.interp(df.index, evar[vtime], evar)
                         ivar = ivar.astype(df[dd].dtype)
-                        df.loc[:, dd] = df[dd].where(df[dd].notna(), other=ivar)
+                        df.loc[:, dd] = df[dd].where(df[dd].notna(),
+                                                     other=ivar)
                 elif (dd == 'precip') or (dd == 'rainf'):
                     # data - rain, snow, and total precip
                     if dd == 'precip':
@@ -2489,7 +2511,8 @@ class prepSiteForcing(object):
                         ivar *= dt
                         ivar = ivar.astype(df[dd].dtype)
                         if dd == 'precip':
-                            df.loc[:, dd] = df[dd].where(df[dd].notna(), other=ivar)
+                            df.loc[:, dd] = df[dd].where(df[dd].notna(),
+                                                         other=ivar)
                         else:
                             tair = ds['t2m']
                             if isinstance(tair, (pd.DataFrame, pd.Series)):
@@ -2515,7 +2538,8 @@ class prepSiteForcing(object):
                             snowf = np.where(tair < 274.15, ivar, 0.)
                             rainf = rainf.astype(df[dd].dtype)
                             snowf = snowf.astype(df[dd].dtype)
-                            df.loc[:, dd] = df[dd].where(df[dd].notna(), other=rainf)
+                            df.loc[:, dd] = df[dd].where(df[dd].notna(),
+                                                         other=rainf)
                             df.loc[:, 'snowf'] = df['snowf'].where(
                                 df['snowf'].notna(), other=snowf)
                     else:
@@ -2809,7 +2833,7 @@ class prepSiteForcing(object):
         if keep_csv is None:
             keep_csv = self.keep_csv
 
-        leco = self.ecomodel.lower()  # musica, isba
+        leco = self.ecomodel.lower()  # e.g. musica
         exec(f'from ascii2{leco} import ascii2{leco}', globals())
         print(f'Write netcdf {self.outputfile}')
 
@@ -2821,7 +2845,9 @@ class prepSiteForcing(object):
             'startdate': self.startdate,
             'fill_value': self.fill_value,
             'verbose': self.verbose}
-        aopt = (f'-o {self.outputfile}'
+        # aopt is only for print to be able to run ascii2netcdf again
+        # on the command line
+        aopt = (f' -o {self.outputfile}'
                 f' -t {self.ftimestep}')
         if self.enddate:
             aopt += f' -e "{self.enddate}"'
@@ -2860,6 +2886,17 @@ class prepSiteForcing(object):
                      f' --reference_height_wind {self.reference_height_wind}'
                      f' --slope {self.slope}'
                      f' --aspect {self.aspect}')
+            print(f'Calling python ascii2{leco}.py {aopt} {csvfile}')
+        elif leco == 'orchidee':
+            kwargs.update({
+                'latitude': self.latitude,
+                'longitude': self.longitude,
+                'time2gmt': self.time2gmt,
+                'forcing_height': self.reference_height})
+            aopt += (f' --latitude {self.latitude}'
+                     f' --longitude {self.longitude}'
+                     f' --time2gmt {self.time2gmt}'
+                     f' --forcing_height {self.reference_height}')
             print(f'Calling python ascii2{leco}.py {aopt} {csvfile}')
 
         exec(f'ascii2{leco}(csvfile, **kwargs)')

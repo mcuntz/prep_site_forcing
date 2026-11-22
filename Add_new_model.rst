@@ -393,7 +393,7 @@ dimension, such Tair, and some not. ORCHIDEE allows to have other variables in t
 
 Last, we write the values into the variables. Times can either be
 given in local time or in UTC in ORCHIDEE. We shift the times to
-UTZ if the option time2gmt is different to 0.
+UTC if the option time2gmt is different to 0.
 
 .. code-block:: python
 
@@ -595,9 +595,9 @@ Adapt config file
 -----------------
 
 If you added a new variable or option for a new model, you can add it
-to the section [Model Options] of the config file. Do not forget to
+to the section ``[Model Options]`` of the config file. Do not forget to
 read it in the method ``read_configfile`` in the class
-``prepSiteForcing``. Here we just "recycled" the option time2gmt for
+``prepSiteForcing``. Here we just *recycled* the option *time2gmt* for
 ORCHIDEE that was already present for MuSICA.
 
 

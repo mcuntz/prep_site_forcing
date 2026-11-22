@@ -21,12 +21,11 @@ Steps are:
    * `Enhance prepSiteForcing`_
    * `Adapt config file`_
 
-Here we add the land surface model ORCHIDEE_ for the flux site FR-Fon_
-(Fontainebleau-Barbeau) as an example.
+Here we add the land surface model ORCHIDEE_ as an example.
 
 
-Make ascii2netcdf script
-------------------------
+Make ascii2orchidee script
+--------------------------
 
 The netcdf forcing file for ORCHIDEE has the following structure: ::
 
@@ -112,27 +111,27 @@ One needs a function ``ascii2orchidee`` within a file
 ``ascii2orchidee.py`` that can be called from within the method
 ``write_netcdf`` of the class ``prepSiteForcing``. It is convenient
 that this script can also be called from the command line with command
-line options.
+line options (see below).
 
 We enhance the class ``ascii2Netcdf``. We have to set the name of the
 output variables, convert the variables to the correct units, and
 write the netcdf file.
 
-   * We copy the file ``ascii2musica.py`` to ``ascii2orchidee.py`` for
-     a start.
-   * In the file, replace all instances of *musica* by *orchidee* (I
-     would follow the same uppercase/lowercase conventions as used in
-     ``ascii2musica``).
-   * One can delete all code that uses `site_altitude` and
-     `namelist`. That's in `__init__`, `ascii2orchidee`, the command
-     line options and the docstrings.
-   * Replace all `site_` with nothing ``. That changes all
-     `site_latitude` to `latitude` and all `site_longitude` to
-     `longitude`.
-   * The timestep in ORCHIDEE seems to indicate the start of the
-     timestep. Change the two 0.5 in the block `if self.ftimestep !=
-     1.0:` in `write_netcdf` to 0.0. This will shift all model forcing
-     time steps to the beginning of the timestep.
+   1. We copy the file ``ascii2musica.py`` to ``ascii2orchidee.py`` for
+      a start.
+   2. In the file, replace all instances of *musica* by *orchidee* (I
+      would follow the same uppercase/lowercase conventions as used in
+      ``ascii2musica``).
+   3. One can delete all code that uses `site_altitude` and
+      `namelist`. That's in `__init__`, `ascii2orchidee`, the command
+      line options and the docstrings.
+   4. Replace all `site_` with nothing ``. That changes all
+      `site_latitude` to `latitude` and all `site_longitude` to
+      `longitude`.
+   5. The timestep in ORCHIDEE seems to indicate the start of the
+      timestep. Change the two 0.5 in the block `if self.ftimestep !=
+      1.0:` in `write_netcdf` to 0.0. This will shift all model forcing
+      time steps to the beginning of the timestep.
 
 The `__init__` method should now look like this:
 
@@ -603,4 +602,3 @@ ORCHIDEE that was already present for MuSICA.
 
 
 .. _ORCHIDEE: https://orchidee.ipsl.fr
-.. _FR-Fon: https://meta.icos-cp.eu/resources/stations/ES_FR-Fon

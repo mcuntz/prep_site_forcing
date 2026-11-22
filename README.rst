@@ -11,26 +11,26 @@ Content
 
 Sections of the README are:
 
-   * `About`_
-   * `Installation`_
-   * `Config file`_
+* `About`_
+* `Installation`_
+* `Config file`_
 
-     - `Section [Model]`_
-     - `Section [Options]`_
-     - `Section [Site]`_
-     - `Section [Model Options]`_
-     - `Section [Input]`_
-     - `Section [Output]`_
-     - `Section [ICOS]`_
-     - `Section [FLUXNET]`_
-     - `Section [ERA5]`_
-     - `Section [CO2]`_
-     - `Section [VarNames]`_
-     - `Section [AlternativeVarNames]`_
-     - `Section [VarUnits]`_
+  - `Section [Model]`_
+  - `Section [Options]`_
+  - `Section [Site]`_
+  - `Section [Model Options]`_
+  - `Section [Input]`_
+  - `Section [Output]`_
+  - `Section [ICOS]`_
+  - `Section [FLUXNET]`_
+  - `Section [ERA5]`_
+  - `Section [CO2]`_
+  - `Section [VarNames]`_
+  - `Section [AlternativeVarNames]`_
+  - `Section [VarUnits]`_
 
-   * `Adding a new model`_
-   * `License`_
+* `Adding a new model`_
+* `License`_
 
 
 About
@@ -80,21 +80,21 @@ See ``python prep_site_forcing.py -h`` for help.
 
 Requirements
 
-   * cftime_
-   * matplotlib_
-   * netcdf4_
-   * numpy_
-   * pandas_
-   * pyjams_
-   * scipy_
-   * xarray_
+* cftime_
+* matplotlib_
+* netcdf4_
+* numpy_
+* pandas_
+* pyjams_
+* scipy_
+* xarray_
 
 as well as
 
-   * cdsapi_ if ERA5 must be downloaded; needs a Copernicus account
-     (see `Section [ERA5]`_)
-   * `icoscp_core`_  if ICOS data is used (see `Section [ICOS]`_)
-   * `Fluxnet Shuttle`_  if Fluxnet data is used (see `Section [FLUXNET]`_)
+* cdsapi_ if ERA5 must be downloaded; needs a Copernicus account
+  (see `Section [ERA5]`_)
+* `icoscp_core`_  if ICOS data is used (see `Section [ICOS]`_)
+* `Fluxnet Shuttle`_  if Fluxnet data is used (see `Section [FLUXNET]`_)
 
 
 Config file
@@ -340,14 +340,14 @@ can be independent data, for example from another measurement
 system. The option ``icos_product`` selects one or several
 (comma-delimited) products:
 
-   - 'ETC L2 Fluxes' : L2 ecosystem fluxes
-   - 'ETC L2 Meteosens' : L2 individual meteorological sensors
-   - 'ETC L2 Meteo' : L2 aggregated meteorological variables
-   - 'ETC L2 Fluxnet (half-hourly)' : Fluxnet product of L2 data
-   - 'ETC NRT Fluxes' : NRT ecosystem fluxes
-   - 'ETC NRT Meteosens' : NRT individual meteorological sensors
-   - 'ETC NRT Meteo' : NRT aggregated meteorological variables
-   - 'Fluxnet Product' : Fluxnet Shuttle product
+* 'ETC L2 Fluxes' : L2 ecosystem fluxes
+* 'ETC L2 Meteosens' : L2 individual meteorological sensors
+* 'ETC L2 Meteo' : L2 aggregated meteorological variables
+* 'ETC L2 Fluxnet (half-hourly)' : Fluxnet product of L2 data
+* 'ETC NRT Fluxes' : NRT ecosystem fluxes
+* 'ETC NRT Meteosens' : NRT individual meteorological sensors
+* 'ETC NRT Meteo' : NRT aggregated meteorological variables
+* 'Fluxnet Product' : Fluxnet Shuttle product
 
 The products with 'Meteosens' include all individual meteorological
 variables such as SW_IN_1_1_1 and SW_IN_1_1_2. 'Meteo' has all
@@ -683,18 +683,18 @@ Section [VarUnits]
 The script has to know the units of the variables, which are given in
 the section ``[VarUnits]``. Known units are:
 
-   * ['W/m2', 'W m-2'] for shortave and longwave radiation
-   * ['C', 'degreeC', 'degree C', 'degC', 'deg C', '°C'] for air
-     temperature (otherwise Kelvin assumed)
-   * ['mol/mol', 'mol mol-1', 'mmol/mol', 'mmol mol-1'], ['kPa',
-     'hPa', 'Pa'] and ['%', 'percent', '', '0-1'] for specific
-     humidity, VPD, and relative humidity, respectively
-   * ['hPa', 'kPa', 'mbar', 'bar'] for pressure
-   * ['mm', 'mm/dt', 'mm dt-1','kg/m2/dt', 'kg m-2 dt-1'] for
-     precipitation (dt being the time step)
-   * ['m/s', 'm s-1', ''] for wind speed
-   * ['degree', 'deg', '°', ''] for wind direction
-   * ['ppm', 'ppmv', 'µmol/mol', 'µmol mol-1'] for CO2
+* ['W/m2', 'W m-2'] for shortave and longwave radiation
+* ['C', 'degreeC', 'degree C', 'degC', 'deg C', '°C'] for air
+  temperature (otherwise Kelvin assumed)
+* ['mol/mol', 'mol mol-1', 'mmol/mol', 'mmol mol-1'], ['kPa',
+  'hPa', 'Pa'] and ['%', 'percent', '', '0-1'] for specific
+  humidity, VPD, and relative humidity, respectively
+* ['hPa', 'kPa', 'mbar', 'bar'] for pressure
+* ['mm', 'mm/dt', 'mm dt-1','kg/m2/dt', 'kg m-2 dt-1'] for
+  precipitation (dt being the time step)
+* ['m/s', 'm s-1', ''] for wind speed
+* ['degree', 'deg', '°', ''] for wind direction
+* ['ppm', 'ppmv', 'µmol/mol', 'µmol mol-1'] for CO2
 
 For example:
 

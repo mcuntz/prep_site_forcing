@@ -17,9 +17,9 @@ new models.
 
 Steps are:
 
-   * `Make ascii2netcdf script`_
-   * `Enhance prepSiteForcing`_
-   * `Adapt config file`_
+* `Make ascii2netcdf script`_
+* `Enhance prepSiteForcing`_
+* `Adapt config file`_
 
 Here we add the land surface model ORCHIDEE_ as an example.
 
@@ -162,12 +162,12 @@ The `__init__` method should now look like this:
 Then we change the method `output_variables` for the correct names and
 units:
 
-   * Change `CO2air` to `CO2_f` in `self.co2air`.
-   * Change `Near surface CO2 concentration` to `CO2 mole fraction`,
-     `Near surface northerly wind speed` to `Near surface northward
-     wind component`, and `Near surface easterly wind speed` to `Near
-     surface eastward wind component` in `self.varlongnames`.
-   * We will not change the units to the non-standard units of ORCHIDEE.
+* Change `CO2air` to `CO2_f` in `self.co2air`.
+* Change `Near surface CO2 concentration` to `CO2 mole fraction`,
+  `Near surface northerly wind speed` to `Near surface northward
+  wind component`, and `Near surface easterly wind speed` to `Near
+  surface eastward wind component` in `self.varlongnames`.
+* We will not change the units to the non-standard units of ORCHIDEE.
      
 The `output_variables` method now looks like this:
 

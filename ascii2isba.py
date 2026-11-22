@@ -50,16 +50,6 @@ from class_ascii2netcdf import ascii2Netcdf
 __all__ = ['ascii2Isba', 'ascii2isba', '__docstring__']
 
 
-"""
-Development
-
-py ascii2isba.py --latitude=48.6742166667 --longitude=7.06461666667 --altitude=300.0 --outputfile=ISBA_in_FR-Hes_1997-era5-1.nc --ftimestep=1.0 --reference_height=22.5 --reference_height_wind=22.5 --slope=0.0 --aspect=0.0 --fill_value=-9999999.0 -v ISBA_in_FR-Hes_1997-era5.csv
-
-cdo diffn ISBA_in_FR-Hes_1997-era5.nc ISBA_in_FR-Hes_1997-era5-1.nc
-cdo diffn,rellim=1e-09,abslim=1e-5 ISBA_in_FR-Hes_1997-era5.nc ISBA_in_FR-Hes_1997-era5-1.nc
-"""
-
-
 __docstring__ = """
 Write ISBA netcdf forcing file from csv input file.
 
@@ -215,35 +205,49 @@ class ascii2Isba(ascii2Netcdf):
         Output variable names, longnames, and units
 
         """
-        # name of downwelling shortwave radiation
+        # names of standard variables
+        self.co2air = 'CO2air'
         self.swdown = 'DIR_SWdown'
-        self.lswdown = self.swdown.lower()
-        # name of windspeed
-        self.windspeed = 'Wind'
-        self.lwindspeed = self.windspeed.lower()
+        self.lwdown = 'LWdown'
+        self.psurf = 'PSurf'
+        self.qair = 'Qair'
+        self.rainf = 'Rainf'
+        self.snowf = 'Snowf'
+        self.tair = 'Tair'
+        self.wind1 = 'Wind'
+        self.wind2 = 'Wind_Dir'
         # output variables and units
-        self.varnames = ['CO2air', 'DIR_SWdown', 'LWdown', 'PSurf',
-                         'Qair', 'Rainf', 'SCA_SWdown', 'Snowf',
-                         'Tair', 'Wind', 'Wind_DIR']
-        self.varlownames = [ vv.lower() for vv in self.varnames ]
-        self.varunits = ['kg/m3', 'W/m2', 'W/m2', 'Pa', 'kg/kg', 'kg/m2/s',
-                         'W/m2', 'kg/m2/s', 'K', 'm/s', 'degree']
+        self.stdnames = ['co2air', 'swdown', 'lwdown',
+                         'psurf', 'qair', 'rainf',
+                         'snowf', 'tair', 'wind1', 'wind2']
+        self.varnames = [self.co2air, self.swdown, self.lwdown,
+                         self.psurf, self.qair, self.rainf,
+                         self.snowf, self.tair, self.wind1, self.wind2,
+                         'SCA_SWdown']
+        # output variables and units
+        self.varunits = ['kg/m3', 'W/m2', 'W/m2',
+                         'Pa', 'kg/kg', 'kg/m2/s',
+                         'kg/m2/s', 'K', 'm/s', 'degree',
+                         'W/m2']
         self.varlongnames = ['Near Surface CO2 Concentration',
                              'Surface Incident Direct Shortwave Radiation',
                              'Surface Incident Longwave Radiation',
                              'Surface Pressure',
                              'Near Surface Specific Humidity',
                              'Rainfall Rate',
-                             'Surface Incident Diffuse Shortwave Radiation',
                              'Snowfall Rate',
                              'Near Surface Air Temperature',
                              'Wind Speed',
-                             'Wind Direction']
+                             'Wind Direction',
+                             'Surface Incident Diffuse Shortwave Radiation']
 
         # dictionary with lowercase variables as keys
-        self.dvarunits = dict(zip(self.varlownames, self.varunits))
-        self.dvarnames = dict(zip(self.varlownames, self.varnames))
-        self.dvarlongnames = dict(zip(self.varlownames, self.varlongnames))
+        self.varnames_lower = [ vv.lower() for vv in self.varnames ]
+        self.dict_varunits = dict(zip(self.varnames_lower, self.varunits))
+        self.dict_varnames = dict(zip(self.varnames_lower, self.varnames))
+        self.dict_varlongnames = dict(zip(self.varnames_lower,
+                                          self.varlongnames))
+        self.dict_stdnames = dict(zip(self.stdnames, self.varnames_lower))
 
     #
     # Convert variable units
@@ -257,25 +261,66 @@ class ascii2Isba(ascii2Netcdf):
         # standard conversions
         self.convert_units()
 
-        # SWdown
-        if 'swdown' in self.livars:
-            self.ivars['swdown'] = self.swdown
-            self.df.rename(columns={'swdown': self.lswdown}, inplace=True)
+        # rename variables
+        if 'co2air' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('co2air')] = (
+                self.co2air.lower())
+            self.inputvars[self.co2air] = self.inputvars.pop('co2air')
+        if 'swdown' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('swdown')] = (
+                self.swdown.lower())
+            self.inputvars[self.swdown] = self.inputvars.pop('swdown')
+        if 'lwdown' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('lwdown')] = (
+                self.lwdown.lower())
+            self.inputvars[self.lwdown] = self.inputvars.pop('lwdown')
+        if 'psurf' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('psurf')] = (
+                self.psurf.lower())
+            self.inputvars[self.psurf] = self.inputvars.pop('psurf')
+        if 'qair' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('qair')] = (
+                self.qair.lower())
+            self.inputvars[self.qair] = self.inputvars.pop('qair')
+        if 'tair' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('tair')] = (
+                self.tair.lower())
+            self.inputvars[self.tair] = self.inputvars.pop('tair')
+
+        dren = {}
+        if 'co2air' in self.df:
+            dren.update({'co2air': self.co2air.lower()})
+        if 'swdown' in self.df:
+            dren.update({'swdown': self.swdown.lower()})
+        if 'lwdown' in self.df:
+            dren.update({'lwdown': self.lwdown.lower()})
+        if 'psurf' in self.df:
+            dren.update({'psurf': self.psurf.lower()})
+        if 'qair' in self.df:
+            dren.update({'qair': self.qair.lower()})
+        if 'tair' in self.df:
+            dren.update({'tair': self.tair.lower()})
+        if len(dren) > 0:
+            self.df = self.df.rename(columns=dren)
 
         for vv in ['wind', 'windspeed', 'wind_speed']:
-            if vv in self.livars:
-                self.ivars[vv] = self.lwindspeed
-                self.df.rename(columns={vv: self.lwindspeed}, inplace=True)
+            if vv in self.inputvars_lower:
+                self.inputvars[self.wind1] = self.inputvars.pop(vv)
+                self.df.rename(columns={vv: self.wind1.lower()}, inplace=True)
 
         # Diffuse radiation
-        if 'sca_swdown' not in self.livars:
+        if 'sca_swdown' not in self.inputvars_lower:
             self.df['sca_swdown'] = self.df['tair'].copy()
             self.df.loc[:, 'sca_swdown'] = 0.
+            self.inputvars['SCA_SWdown'] = self.df['sca_swdown']
+            self.inputvars_lower.append('sca_swdown')
 
         # Wind direction
-        if 'wind_dir' not in self.livars:
-            self.df['wind_dir'] = self.df['tair'].copy()
-            self.df.loc[:, 'wind_dir'] = 0.
+        if self.wind2.lower() not in self.inputvars_lower:
+            self.df[self.wind2.lower()] = self.df['tair'].copy()
+            self.df.loc[:, self.wind2.lower()] = 0.
+            self.inputvars[self.wind2] = self.df[self.wind2.lower()]
+            self.inputvars_lower.append(self.wind2.lower())
 
         return
 
@@ -308,7 +353,7 @@ class ascii2Isba(ascii2Netcdf):
 
         """
         if outputfile == '':
-           outputfile = self.ifile[0:self.ifile.rfind(".")] + '.nc'
+           outputfile = self.inputfile[0:self.inputfile.rfind(".")] + '.nc'
         self.outputfile = outputfile
         self.ftimestep = ftimestep
 
@@ -317,14 +362,14 @@ class ascii2Isba(ascii2Netcdf):
             dt = np.timedelta64(self.dt, 's')
             indx = self.df.index + (1.0 - ftimestep) * dt
             self.df.set_index(indx, inplace=True)
-
+            
         doupper = False
         # NETCDF
         if self.verbose:
             print('Create netcdf file ', outputfile)
         with nc.Dataset(outputfile, 'w', format='NETCDF3_64BIT') as fo:
             # Structure
-            nb = fo.createDimension('Number_of_points', 1)
+            nb   = fo.createDimension('Number_of_points', 1)
             time = fo.createDimension('time', None)
 
             lon = fo.createVariable('LON', 'f8', ('Number_of_points',),
@@ -342,12 +387,11 @@ class ascii2Isba(ascii2Netcdf):
             zs.long_name = "altitude"
             zs.units = "m"
 
+            vvar = 'time'
             if doupper:
-                vtime = fo.createVariable('TIME', 'f8', ('time',),
-                                          fill_value=fill_value)
-            else:
-                vtime = fo.createVariable('time', 'f8', ('time',),
-                                          fill_value=fill_value)
+                vvar = vvar.upper()
+            vtime = fo.createVariable(vvar, 'f8', ('time',),
+                                      fill_value=fill_value)
             vtime.long_name = "time"
             vtime.units = f"hours since {self.df.index[0].year}-01-01 00:00:00"
 
@@ -361,25 +405,21 @@ class ascii2Isba(ascii2Netcdf):
             zref.long_name = "Reference_Height"
             zref.units = "m"
 
+            vvar = 'aspect'
             if doupper:
-                vaspect = fo.createVariable('ASPECT', 'f8',
-                                            ('Number_of_points',),
-                                            fill_value=fill_value)
-            else:
-                vaspect = fo.createVariable('aspect', 'f8',
-                                            ('Number_of_points',),
-                                            fill_value=fill_value)
+                vvar = vvar.upper()
+            vaspect = fo.createVariable(vvar, 'f8',
+                                        ('Number_of_points',),
+                                        fill_value=fill_value)
             vaspect.long_name = "slope aspect"
             vaspect.units = "degrees from north"
 
+            vvar = 'slope'
             if doupper:
-                vslope = fo.createVariable('SLOPE', 'f8',
-                                           ('Number_of_points',),
-                                           fill_value=fill_value)
-            else:
-                vslope = fo.createVariable('slope', 'f8',
-                                           ('Number_of_points',),
-                                           fill_value=fill_value)
+                vvar = vvar.upper()
+            vslope = fo.createVariable(vvar, 'f8',
+                                       ('Number_of_points',),
+                                       fill_value=fill_value)
             vslope.long_name = "slope angle"
             vslope.units = "degrees from horizontal"
 
@@ -389,27 +429,25 @@ class ascii2Isba(ascii2Netcdf):
             frc_time_stp.units = "s"
 
             vloc = dict()
-            for iv in self.dvarnames.keys():
+            for iv in self.dict_varnames:
+                vvar = self.dict_varnames[iv]
                 if doupper:
-                    vloc[iv] = fo.createVariable(iv.upper(), 'f8',
-                                                 ('time', 'Number_of_points',),
-                                                 fill_value=fill_value)
-                else:
-                    vloc[iv] = fo.createVariable(self.dvarnames[iv], 'f8',
-                                                 ('time', 'Number_of_points',),
-                                                 fill_value=fill_value)
-                vloc[iv].units = self.dvarunits[iv]
-                vloc[iv].long_name = self.dvarlongnames[iv]
+                    vvar = vvar.upper()
+                vloc[iv] = fo.createVariable(vvar, 'f8',
+                                             ('time', 'Number_of_points',),
+                                             fill_value=fill_value)
+                vloc[iv].units = self.dict_varunits[iv]
+                vloc[iv].long_name = self.dict_varlongnames[iv]
 
             fo.file_name   = outputfile
             fo.production  = ("NetCDF file generated from ASCII file " +
-                              self.ifile + " on " +
+                              self.inputfile + " on " +
                               ptime.strftime("%a %d %B %Y %H:%M:%S"))
 
             # Write variables
 
             # check radiation
-            if 'sca_swdown' in self.livars:
+            if 'sca_swdown' in self.inputvars_lower:
                 iidat = self.df['sca_swdown']
                 ii = np.where(iidat == fill_value)[0]
                 if ii.size > 0:
@@ -433,7 +471,7 @@ class ascii2Isba(ascii2Netcdf):
             vslope[:]  = self.slope
             frc_time_stp[:] = self.dt
 
-            for iv in self.dvarnames.keys():
+            for iv in self.dict_varnames:
                 vloc[iv][:] = self.df[iv]
 
         return

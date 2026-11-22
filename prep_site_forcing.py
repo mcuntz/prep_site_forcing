@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
-            'Prepare input data for the ecosystem models MuSICA or ISBA,'
+            'Prepare input data for the ecosystem models, e.g. MuSICA or ISBA,'
             ' reading the configuration given on the command line.\n\n'
             'Default values will be taken in most cases if options are empty,'
             ' missing or commented out.\n\n'

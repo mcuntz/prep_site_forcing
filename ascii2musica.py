@@ -316,36 +316,49 @@ class ascii2Musica(ascii2Netcdf):
         Output variable names, longnames, and units
 
         """
-        # name of downwelling shortwave radiation 
+        # names of standard variables
+        self.co2air = 'CO2air'
         self.swdown = 'SWdown'
-        self.lswdown = self.swdown.lower()
-        # name of windspeed
-        self.windspeed = 'Wind_N'
-        self.lwindspeed = self.windspeed.lower()
+        self.lwdown = 'LWdown'
+        self.psurf = 'PSurf'
+        self.qair = 'Qair'
+        self.rainf = 'Rainf'
+        self.snowf = 'Snowf'
+        self.tair = 'Tair'
+        self.wind1 = 'Wind_N'
+        self.wind2 = 'Wind_E'
         # output variables and units
-        self.varnames = ['CO2air', self.swdown, 'LWdown', 'PSurf',
-                         'Qair', 'Rainf', 'Snowf', 'Tair',
-                         self.windspeed, 'Wind_E']  # , 'h_sbl']
-        self.varlownames = [ vv.lower() for vv in self.varnames ]
+        self.stdnames = ['co2air', 'swdown', 'lwdown',
+                         'psurf', 'qair', 'rainf',
+                         'snowf', 'tair', 'wind1', 'wind2']
+        self.varnames = [self.co2air, self.swdown, self.lwdown,
+                         self.psurf, self.qair, self.rainf,
+                         self.snowf, self.tair, self.wind1, self.wind2]  # ,
+                         # 'h_sbl']
+        self.varnames_lower = [ vv.lower() for vv in self.varnames ]
         self.varunits = ['ppmv', 'W/m2', 'W/m2', 'Pa',
                          'kg/kg', 'kg/m2/s', 'kg/m2/s', 'K',
-                         'm/s', 'm/s']  # ,'m']
+                         'm/s', 'm/s']  # ,
+                         # 'm']
         self.varlongnames = ['Near surface CO2 concentration',
                              'Surface incident shortwave radiation',
                              'Surface incident longwave radiation',
                              'Surface pressure',
                              'Near surface specific humidity',
                              'Rainfall rate',
-                             'Snowfall Rate',
+                             'Snowfall rate',
                              'Near surface air temperature',
                              'Near surface northerly wind speed',
                              'Near surface easterly wind speed']  # ,
                              # 'Surface boundary layer height']
 
         # dictionary with lowercase variables as keys
-        self.dvarunits = dict(zip(self.varlownames, self.varunits))
-        self.dvarnames = dict(zip(self.varlownames, self.varnames))
-        self.dvarlongnames = dict(zip(self.varlownames, self.varlongnames))
+        self.varnames_lower = [ vv.lower() for vv in self.varnames ]
+        self.dict_varunits = dict(zip(self.varnames_lower, self.varunits))
+        self.dict_varnames = dict(zip(self.varnames_lower, self.varnames))
+        self.dict_varlongnames = dict(zip(self.varnames_lower,
+                                          self.varlongnames))
+        self.dict_stdnames = dict(zip(self.stdnames, self.varnames_lower))
 
     #
     # Convert variable units
@@ -359,47 +372,90 @@ class ascii2Musica(ascii2Netcdf):
         # standard conversions
         self.convert_units()
 
-        # rename SWdown variables
-        if 'swdown' in self.livars:
-            self.livars[self.livars.index('swdown')] = self.lswdown
+        # rename variables
+        if 'co2air' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('co2air')] = (
+                self.co2air.lower())
+            self.inputvars[self.co2air] = self.inputvars.pop('co2air')
+        if 'swdown' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('swdown')] = (
+                self.swdown.lower())
+            self.inputvars[self.swdown] = self.inputvars.pop('swdown')
+        if 'lwdown' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('lwdown')] = (
+                self.lwdown.lower())
+            self.inputvars[self.lwdown] = self.inputvars.pop('lwdown')
+        if 'psurf' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('psurf')] = (
+                self.psurf.lower())
+            self.inputvars[self.psurf] = self.inputvars.pop('psurf')
+        if 'qair' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('qair')] = (
+                self.qair.lower())
+            self.inputvars[self.qair] = self.inputvars.pop('qair')
+        if 'tair' in self.inputvars_lower:
+            self.inputvars_lower[self.inputvars_lower.index('tair')] = (
+                self.tair.lower())
+            self.inputvars[self.tair] = self.inputvars.pop('tair')
+
+        dren = {}
+        if 'co2air' in self.df:
+            dren.update({'co2air': self.co2air.lower()})
+        if 'swdown' in self.df:
+            dren.update({'swdown': self.swdown.lower()})
+        if 'lwdown' in self.df:
+            dren.update({'lwdown': self.lwdown.lower()})
+        if 'psurf' in self.df:
+            dren.update({'psurf': self.psurf.lower()})
+        if 'qair' in self.df:
+            dren.update({'qair': self.qair.lower()})
+        if 'tair' in self.df:
+            dren.update({'tair': self.tair.lower()})
+        if len(dren) > 0:
+            self.df = self.df.rename(columns=dren)
 
         # wind_n / wind_e
-        if 'wind_n' in self.livars:
-            if 'wind_e' not in self.livars:
-                self.df['wind_e'] = np.zeros_like(self.df['wind_n'])  # easterly
+        dren = {}
+        if self.wind1.lower() in self.inputvars_lower:  # wind_n
+            if self.wind2.lower() not in self.inputvars_lower:  # wind_e
+                self.df[self.wind2.lower()] = np.zeros_like(
+                    self.df[self.wind1.lower()])
         else:
             for vv in ['wind', 'windspeed', 'wind_speed']:
-                if vv in self.livars:
+                if vv in self.inputvars_lower:
                     vwind = vv
                     break
             vdir = ''
             for vv in ['wind_dir', 'winddir']:
-                if vv in self.livars:
+                if vv in self.inputvars_lower:
                     vdir = vv
                     break
             if vdir:
                 # northerly / easterly
-                self.df['wind_n'] = (self.df[vwind] *
-                                     np.sin(np.deg2rad(self.df[vdir])))
-                self.df['wind_e'] = (self.df[vwind] *
-                                     np.cos(np.deg2rad(self.df[vdir])))
+                self.df[self.wind1.lower()] = (self.df[vwind] *
+                                               np.sin(np.deg2rad(
+                                                   self.df[vdir])))
+                self.df[self.wind2.lower()] = (self.df[vwind] *
+                                               np.cos(np.deg2rad(
+                                                   self.df[vdir])))
                 #MC comment keep Wind_dir at FR-Hes
                 self.df.drop(axis=0, columns=[vdir], inplace=True)
-                self.livars.remove(vdir)
-                #MC uncomment keep Wind_dir at FR-Hes
-                # if 'wind_dir' in self.livars:
-                #     self.ivars['wind_dir'] = 'Wind_dir'
-                #MC keep Wind_dir at FR-Hes
+                self.inputvars_lower.remove(vdir)
+                #MC uncomment to keep Wind_dir at FR-Hes
+                # if 'wind_dir' in self.inputvars_lower:
+                #     self.inputvars['wind_dir'] = 'Wind_dir'
+                #MC to keep Wind_dir at FR-Hes
             else:
-                self.df['wind_n'] = self.df[vwind]                    # northerly
-                self.df['wind_e'] = np.zeros_like(self.df['wind_n'])  # easterly
-            if vwind not in ['wind_n', 'wind_e']:
+                self.df[self.wind1.lower()] = self.df[vwind]  # northerly
+                self.df[self.wind2.lower()] = np.zeros_like(
+                    self.df[self.wind2.lower()])  # easterly
+            if vwind not in [self.wind1.lower(), self.wind2.lower()]:
                 self.df.drop(axis=0, columns=[vwind], inplace=True)
-                self.livars.remove(vwind)
+                self.inputvars_lower.remove(vwind)
 
         # #MC uncomment upcase wtdepth for mesocosm
-        # if 'wtdepth' in self.livars:
-        #     self.ivars['wtdepth'] = 'WTDEPTH'
+        # if 'wtdepth' in self.inputvars_lower:
+        #     self.inputvars['wtdepth'] = 'WTDEPTH'
         # #MC uncomment upcase wtdepth for mesocosm
 
         return
@@ -408,7 +464,7 @@ class ascii2Musica(ascii2Netcdf):
     # Write output file
     #
 
-    def write_netcdf(self, outputfile='', fill_value=None, ftimestep=0.5):
+    def write_netcdf(self, outputfile='', fill_value=None, ftimestep=1.0):
         """
         Write output netcdf file
 
@@ -430,11 +486,11 @@ class ascii2Musica(ascii2Netcdf):
 
             Note that MuSICA is using the middle of the time step, so
             output times will be transformed to the middle of the
-            timestep. (Default: 0.5)
+            timestep. (Default: 1.0)
 
         """        
         if outputfile == '':
-           outputfile = self.ifile[0:self.ifile.rfind('.')] + '.nc'
+           outputfile = self.inputfile[0:self.inputfile.rfind('.')] + '.nc'
         self.outputfile = outputfile
         self.ftimestep = ftimestep
 
@@ -455,63 +511,64 @@ class ascii2Musica(ascii2Netcdf):
             z    = fo.createDimension('z', 1)
             time = fo.createDimension('time', None)
 
-            nav_lon            = fo.createVariable('nav_lon', 'f4', ('y', 'x',))
-            nav_lon.long_name  = 'Longitude'
-            nav_lon.units      = 'degrees_east'
-            nav_lon.valid_min  = -180.
-            nav_lon.valid_max  = 180.
+            nav_lon           = fo.createVariable('nav_lon', 'f4', ('y', 'x',))
+            nav_lon.long_name = 'Longitude'
+            nav_lon.units     = 'degrees_east'
+            nav_lon.valid_min = -180.
+            nav_lon.valid_max = 180.
 
-            nav_lat            = fo.createVariable('nav_lat', 'f4', ('y', 'x',))
-            nav_lat.long_name  = 'Latitude'
-            nav_lat.units      = 'degrees_north'
-            nav_lat.valid_min  = -90.
-            nav_lat.valid_max  = 90.
+            nav_lat           = fo.createVariable('nav_lat', 'f4', ('y', 'x',))
+            nav_lat.long_name = 'Latitude'
+            nav_lat.units     = 'degrees_north'
+            nav_lat.valid_min = -90.
+            nav_lat.valid_max = 90.
 
-            x                  = fo.createVariable('x', 'i4', ('x',))
-            y                  = fo.createVariable('y', 'i4', ('y',))
-            level              = fo.createVariable('level', 'f4', ('z',))
+            x     = fo.createVariable('x', 'i4', ('x',))
+            y     = fo.createVariable('y', 'i4', ('y',))
+            level = fo.createVariable('level', 'f4', ('z',))
 
-            vtime              = fo.createVariable('time', 'f8', ('time',))
-            vtime.long_name    = 'Time'
-            vtime.units        = f'hours since {self.df.index[0].year}-01-01 00:00:00'
-            vtime.calendar     = 'gregorian'
-            vtime.time_origin  = (f'{self.df.index[0].year}-JAN-01 00:00:00 (GMT+'
-                                  f'{self.time2gmt})')
+            vtime             = fo.createVariable('time', 'f8', ('time',))
+            vtime.long_name   = 'Time'
+            vtime.units       = (f'hours since'
+                                 f' {self.df.index[0].year}-01-01 00:00:00')
+            vtime.calendar    = 'gregorian'
+            vtime.time_origin = (f'{self.df.index[0].year}-JAN-01 00:00:00'
+                                 f' (GMT+{self.time2gmt})')
 
             vloc = dict()
             # Write all columns not only the MuSICA forcing columns
-            # for iv in self.dvarnames.keys():
+            # for iv in self.dict_varnames:
             for iv in self.df.columns:
-                if iv in ['tair', 'qair', 'co2air', 'wind_n', 'wind_e']:
-                    vloc[iv] = fo.createVariable(self.dvarnames[iv], 'f4',
+                if iv in ['tair', 'qair', 'co2air', 'wind1', 'wind2']:
+                    vv = self.dict_varnames[self.dict_stdnames[iv]]
+                    vloc[iv] = fo.createVariable(vv, 'f4',
                                                  ('time', 'z', 'y', 'x',),
                                                  fill_value=fill_value)
                 else:
-                    if iv in self.dvarnames:
-                        vloc[iv] = fo.createVariable(self.dvarnames[iv], 'f4',
-                                                     ('time', 'y', 'x',),
-                                                     fill_value=fill_value)
-                    elif iv in self.livars:
-                        vloc[iv] = fo.createVariable(self.ivars[iv], 'f4',
-                                                     ('time', 'y', 'x',),
-                                                     fill_value=fill_value)
+                    if iv in self.dict_stdnames:
+                         vv = self.dict_varnames[self.dict_stdnames[iv]]
+                    elif iv in self.dict_varnames:
+                        vv = self.dict_varnames[iv]
+                    elif iv in self.inputvars_lower:
+                        vv = self.inputvars[iv]
                     else:
-                        vloc[iv] = fo.createVariable(iv, 'f4',
-                                                     ('time', 'y', 'x',),
-                                                     fill_value=fill_value)
-                if iv in self.dvarnames:
-                    if self.dvarunits[iv]:
-                        vloc[iv].units = self.dvarunits[iv]
-                    if self.dvarlongnames[iv]:
-                        vloc[iv].long_name = self.dvarlongnames[iv]
-                elif iv in self.livars:
-                    if self.iunits[iv]:
-                        vloc[iv].units = self.iunits[iv]
+                        vv = iv
+                    vloc[iv] = fo.createVariable(vv, 'f4',
+                                                 ('time', 'y', 'x',),
+                                                 fill_value=fill_value)
+                if iv in self.dict_varnames:
+                    if self.dict_varunits[iv]:
+                        vloc[iv].units = self.dict_varunits[iv]
+                    if self.dict_varlongnames[iv]:
+                        vloc[iv].long_name = self.dict_varlongnames[iv]
+                elif iv in self.inputvars_lower:
+                    if self.inputunits[iv]:
+                        vloc[iv].units = self.inputunits[iv]
 
             fo.conventions = 'GDT 1.2'
             fo.file_name   = outputfile
             fo.production  = ('NetCDF file generated from ASCII file ' +
-                              self.ifile + ' on ' +
+                              self.inputfile + ' on ' +
                               ptime.strftime('%a %d %B %Y %H:%M:%S'))
 
             # calc netCDF time
@@ -530,7 +587,7 @@ class ascii2Musica(ascii2Netcdf):
             level[:]   = self.forcing_height
             vtime[:]   = dtime
 
-            # for iv in self.dvarnames.keys():
+            # for iv in self.dict_varnames:
             for iv in self.df.columns:
                 vloc[iv][:] = self.df[iv]
 
@@ -545,7 +602,7 @@ def ascii2musica(csvfile,
                  namelist='', site_latitude=None, site_longitude=None,
                  site_altitude=None, forcing_height=None, time2gmt=None,
                  startdate='', enddate='', interpolate=False,
-                 outputfile='', fill_value=None, ftimestep=0.5,
+                 outputfile='', fill_value=None, ftimestep=1.0,
                  verbose=False, **kwargs):
     """
     Write MuSICA netcdf forcing file from csv input file.
@@ -595,7 +652,7 @@ def ascii2musica(csvfile,
 
         Note that MuSICA is using the middle of the time step, so
         output times will be transformed to the middle of the
-        timestep. (Default: 0.5)
+        timestep. (Default: 1.0)
     verbose : bool, optional
         Report progress if True.
     **kwargs : dict, optional
@@ -631,7 +688,7 @@ if __name__ == '__main__':
     enddate = ''
     outputfile = ''
     namelist = ''
-    ftimestep = 0.5
+    ftimestep = 1.0
     site_latitude = None
     site_longitude = None
     site_altitude = None
@@ -666,7 +723,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--namelist', action='store',
                         default=namelist, dest='namelist', metavar='namelist',
                         help='MuSICA namelist file.')
-    hstr = ('Fraction of time step at which time is given (default: 0.5):'
+    hstr = ('Fraction of time step at which time is given (default: 1.0):'
             ' 0=beginning of time step, 0.5=middle of time step, 1=end of'
             ' time step. Note that MuSICA is using the middle of the time'
             ' step so output times will be transformed to the middle of the'

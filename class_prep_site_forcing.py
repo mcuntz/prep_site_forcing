@@ -8,6 +8,7 @@ History
      from script prep_site_forcing.py
    * grib, netcdf, and csv ERA5 files possible, Matthias Cuntz, Apr 2026
    * Allow no input file to get all ERA5 forcing, Matthias Cuntz, Apr 2026
+   * Add ORCHIDEE, Matthias Cuntz, Nov 2026
 
 '''
 from collections.abc import Iterable

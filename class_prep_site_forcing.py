@@ -1750,11 +1750,13 @@ class prepSiteForcing(object):
                 dsl.append(pd.read_csv(ff, **ropt))
             # try to combine files with different variables and
             # files with different time steps
-            ds = dsl[0]
-            for ds1 in dsl[1:]:
-                ds, ds1 = ds.align(ds1, join="outer")
-                ds1 = ds1.fillna(ds)
-                ds = ds.fillna(ds1)
+            ds = pd.DataFrame()
+            for ds1 in dsl:
+                    ds, ds1 = ds.align(ds1, join="outer")
+                    ds1 = ds1.fillna(ds)
+                    ds = ds.fillna(ds1)
+            ds = ds.sort_index()
+            ds = ds[~ds.index.duplicated(keep='first')]
 
         return ds
 

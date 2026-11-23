@@ -362,7 +362,7 @@ def get_era5(varlist=[], area='90/-180/-90/180', date=None, path='.',
         mindate = '1950-01-02'
         # era5-land has a latency of about 2-3 months.
         # But it seems to accept days that do not exist in the product yet.
-        latency = 0
+        latency = 7
         if not output_format:
             output_format = 'csv'
         omodel = 'era5-land-ts'
@@ -574,11 +574,44 @@ def get_era5(varlist=[], area='90/-180/-90/180', date=None, path='.',
                 dfl.append(pd.read_csv(ff, **ropt))
             # try to combine files with different variables and
             # files with different time steps
-            df = dfl[0]
-            for df1 in dfl[1:]:
-                df, df1 = df.align(df1, join="outer")
-                df1 = df1.fillna(df)
-                df = df.fillna(df1)
+            df = pd.DataFrame()
+            for df1 in dfl:
+                # check for lat,lon
+                if 'lat' in df1.columns:
+                    vlat = 'lat'
+                elif 'latitude' in df1.columns:
+                    vlat = 'latitude'
+                else:
+                    raise ValueError("'latitude' column not found")
+                if 'lon' in df1.columns:
+                    vlon = 'lon'
+                elif 'longitude' in df1.columns:
+                    vlon = 'longitude'
+                else:
+                    raise ValueError("'longitude' column not found")
+                elat = np.round(df1[vlat].values, 2)
+                elon = np.round(df1[vlon].values, 2)
+                ihavelat = True
+                if ',' in area:
+                    lat, lon = [ float(ll) for ll in area.split(',') ]
+                    if lat not in elat:
+                        ihavelat = False
+                    if lon not in elon:
+                        ihavelat = False
+                else:
+                    n, w, s, e = [ float(ll) for ll in area.split('/') ]
+                    res2 = resolution / 2
+                    if ((n >= elat.max() + res2) or
+                        (w <= elon.min() - res2) or
+                        (s <= elat.min() - res2) or
+                        (e >= elon.max() + res2)):
+                        ihavelat = False
+                if ihavelat:
+                    df, df1 = df.align(df1, join="outer")
+                    df1 = df1.fillna(df)
+                    df = df.fillna(df1)
+            df = df.sort_index()
+            df = df[~df.index.duplicated(keep='first')]
             # check for missing variable
             if 'u10m' in df.columns:
                 vardict.update({'10m_u_component_of_wind': 'u10m'})
@@ -593,41 +626,12 @@ def get_era5(varlist=[], area='90/-180/-90/180', date=None, path='.',
             if dedate > tmax:
                 if (dsdate <= tmax) and (dsdate >= tmin):
                     dsdate = tmax + np.timedelta64(1, 'h')
-            elif dsdate < tmin:
+            if dsdate < tmin:
                 if (dedate <= tmax) and (dedate >= tmin):
                     dedate = tmin - np.timedelta64(1, 'h')
-            else:
+            if (dsdate >= tmin) and (dedate <= tmax):
                 dsdate = None
                 dedate = None
-            # check for missing lat,lon
-            if 'lat' in df.columns:
-                vlat = 'lat'
-            elif 'latitude' in df.columns:
-                vlat = 'latitude'
-            else:
-                raise ValueError("'latitude' column not found")
-            if 'lon' in df.columns:
-                vlon = 'lon'
-            elif 'longitude' in df.columns:
-                vlon = 'longitude'
-            else:
-                raise ValueError("'longitude' column not found")
-            elat = np.round(df[vlat].values, 2)
-            elon = np.round(df[vlon].values, 2)
-            if ',' in area:
-                lat, lon = [ float(ll) for ll in area.split(',') ]
-                if lat not in elat:
-                    ihavelat = False
-                if lon not in elon:
-                    ihavelat = False
-            else:
-                n, w, s, e = [ float(ll) for ll in area.split('/') ]
-                res2 = resolution / 2
-                if ((n >= elat.max() + res2) or
-                    (w <= elon.min() - res2) or
-                    (s <= elat.min() - res2) or
-                    (e >= elon.max() + res2)):
-                    ihavelat = False
 
         # Return if everything already present
         if ((len(dvars) == 0) and (dsdate is None) and ihavelat):
